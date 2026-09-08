@@ -36,6 +36,32 @@ QPushButton:disabled {
 }
 """
 
+ENABLED_BUTTON_STYLE = """
+QPushButton {
+    background-color: #ffffff;
+    color: #333333;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+}
+QPushButton:hover {
+    background-color: #f0f0f0;
+    border-color: #bbbbbb;
+}
+QPushButton:pressed {
+    background-color: #e6f0fa;
+    border-color: #0078d4;
+}
+QPushButton:checked {
+    background-color: #e6f0fa;
+    border-color: #0078d4;
+    color: #0078d4;
+}
+"""
+
 SIDEBAR_STYLE = """
 QWidget {
     background-color: #fafafa;

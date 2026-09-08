@@ -9,7 +9,8 @@ from app.core.constants import (
     PLACEHOLDER_BUTTON_STYLE,
     SIDEBAR_STYLE,
     DATA_STRUCTURES_SECTION_TITLE,
-    SIDEBAR_WIDTH
+    SIDEBAR_WIDTH,
+    ENABLED_BUTTON_STYLE
 )
 
 
@@ -70,7 +71,10 @@ class Sidebar(QWidget):
 
         self._buttons = {}
         for ds_name in DATA_STRUCTURES:
-            button = self._create_placeholder_button(ds_name)
+            if ds_name == "Array":
+                button = self._create_enabled_button(ds_name)
+            else:
+                button = self._create_placeholder_button(ds_name)
             self._buttons[ds_name] = button
             scroll_layout.addWidget(button)
 
@@ -90,8 +94,24 @@ class Sidebar(QWidget):
         button.clicked.connect(lambda checked, n=name: self._on_button_clicked(n))
         return button
 
+    def _create_enabled_button(self, name):
+        button = QPushButton(name)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setStyleSheet(ENABLED_BUTTON_STYLE)
+        button.setEnabled(True)
+        button.setCheckable(True)
+        button.setToolTip(f"{name} visualization")
+        button.clicked.connect(lambda checked, n=name: self._on_button_clicked(n))
+        return button
+
     def _on_button_clicked(self, name):
         if self._selected_button:
-            self._selected_button.setStyleSheet(PLACEHOLDER_BUTTON_STYLE)
+            if self._selected_button.text().endswith("(Coming Soon)"):
+                self._selected_button.setStyleSheet(PLACEHOLDER_BUTTON_STYLE)
+            else:
+                self._selected_button.setStyleSheet(ENABLED_BUTTON_STYLE)
+                self._selected_button.setChecked(False)
         self._selected_button = self._buttons[name]
+        if not self._selected_button.text().endswith("(Coming Soon)"):
+            self._selected_button.setChecked(True)
         self.data_structure_selected.emit(name)
