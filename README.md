@@ -43,12 +43,24 @@ The goal of this project is to create an interactive educational tool that helps
 - [x] Stack operations: Push, Pop, Peek, Is Empty, Size, Traverse, Clear
 - [x] TOP/BOTTOM indicators with arrow
 - [x] Visual highlighting for operations
+- [x] Pop animation with QTimer transition
 - [x] Operation feedback with time/space complexity
 - [x] Error handling for invalid inputs
 - [x] Unit tests (`tests/test_stack.py`)
 
+**Phase 4 - Queue Visualization (COMPLETED):**
+- [x] Queue data structure implementation (`data_structures/queue.py`)
+- [x] Queue visualization with horizontal layout (`visualization/queue_visualizer.py`)
+- [x] Queue operations: Enqueue, Dequeue, Front, Rear, Is Empty, Size, Traverse, Clear
+- [x] FRONT/REAR indicators with direction arrows
+- [x] FIFO direction visualization
+- [x] Visual highlighting for operations
+- [x] Dequeue animation with QTimer transition
+- [x] Operation feedback with time/space complexity
+- [x] Error handling for invalid inputs
+- [x] Unit tests (`tests/test_queue.py`)
+
 **Upcoming Phases:**
-- [ ] Phase 4: Queue visualization
 - [ ] Phase 5: Linked List visualization
 - [ ] Phase 6: Binary Search Tree visualization
 - [ ] Phase 7: Heap visualization
@@ -89,8 +101,11 @@ python -m pytest tests/test_array.py -v
 # Run Stack tests specifically
 python -m pytest tests/test_stack.py -v
 
+# Run Queue tests specifically
+python -m pytest tests/test_queue.py -v
+
 # Run with unittest
-python -m unittest tests.test_array tests.test_stack -v
+python -m unittest tests.test_array tests.test_stack tests.test_queue -v
 ```
 
 ## Array Visualization
@@ -178,6 +193,47 @@ The Stack module is the second fully functional data structure in the applicatio
 | Traverse | O(n) | O(1) auxiliary |
 | Clear | O(n) | O(1) auxiliary |
 
+## Queue Visualization
+
+The Queue module is the third fully functional data structure in the application.
+
+### Supported Operations
+
+| Operation | Description | Input Format |
+|-----------|-------------|--------------|
+| **Enqueue** | Add element to rear | `50` (value only) |
+| **Dequeue** | Remove and return front | (no input required) |
+| **Front** | View front without removing | (no input required) |
+| **Rear** | View rear without removing | (no input required) |
+| **Is Empty** | Check if queue is empty | (no input required) |
+| **Size** | Return element count | (no input required) |
+| **Traverse** | Display all elements | (no input required) |
+| **Clear** | Remove all elements | (no input required) |
+
+### Visual Features
+
+- Queue displayed horizontally with FRONT (left) and REAR (right) indicators
+- FIFO direction arrows: DEQUEUE ← (left) and ENQUEUE → (right)
+- BLUE highlight for Front element
+- GREEN highlight for Rear element
+- YELLOW highlight for newly enqueued elements
+- RED highlight for dequeued element (animation)
+- Top and bottom FRONT/REAR labels
+- Operation feedback displayed below visualization
+
+### Time & Space Complexity
+
+| Operation | Time Complexity | Space Complexity |
+|-----------|-----------------|------------------|
+| Enqueue | O(1) | O(1) auxiliary |
+| Dequeue | O(1) | O(1) |
+| Front | O(1) | O(1) |
+| Rear | O(1) | O(1) |
+| Is Empty | O(1) | O(1) |
+| Size | O(1) | O(1) |
+| Traverse | O(n) | O(1) auxiliary |
+| Clear | O(n) | O(1) auxiliary |
+
 ## Project Structure
 
 ```
@@ -198,17 +254,20 @@ DataStructureVisualizer/
 ├── data_structures/       # Data structure implementations
 │   ├── __init__.py
 │   ├── array.py           # Array implementation
-│   └── stack.py           # Stack implementation
+│   ├── stack.py           # Stack implementation
+│   └── queue.py           # Queue implementation (collections.deque)
 ├── algorithms/            # Algorithm implementations (future)
 │   └── __init__.py
 ├── visualization/         # Visualization utilities
 │   ├── __init__.py
-│   ├── array_visualizer.py  # Array visualization widget
-│   └── stack_visualizer.py  # Stack visualization widget
+│   ├── array_visualizer.py   # Array visualization widget
+│   ├── stack_visualizer.py   # Stack visualization widget
+│   └── queue_visualizer.py   # Queue visualization widget
 └── tests/                 # Unit tests
     ├── __init__.py
     ├── test_array.py      # Array unit tests
-    └── test_stack.py      # Stack unit tests
+    ├── test_stack.py      # Stack unit tests
+    └── test_queue.py      # Queue unit tests
 ```
 
 ## Architecture Overview
@@ -220,10 +279,13 @@ DataStructureVisualizer/
 - **app/core/constants.py**: All reusable constants, styles, and configuration
 - **data_structures/array.py**: Pure Python Array implementation (no GUI dependencies)
 - **data_structures/stack.py**: Pure Python Stack implementation (no GUI dependencies)
+- **data_structures/queue.py**: Pure Python Queue implementation using collections.deque (no GUI dependencies)
 - **visualization/array_visualizer.py**: PyQt6 widget for Array visualization
 - **visualization/stack_visualizer.py**: PyQt6 widget for Stack visualization
+- **visualization/queue_visualizer.py**: PyQt6 widget for Queue visualization
 - **tests/test_array.py**: Unit tests for Array data structure
 - **tests/test_stack.py**: Unit tests for Stack data structure
+- **tests/test_queue.py**: Unit tests for Queue data structure
 
 The codebase follows separation of concerns - UI code is separate from data structure logic, making it easy to extend.
 

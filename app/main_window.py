@@ -21,14 +21,18 @@ from app.core.constants import (
     ARRAY_OPERATION_NAMES,
     STACK_OPERATIONS,
     STACK_OPERATION_NAMES,
+    QUEUE_OPERATIONS,
+    QUEUE_OPERATION_NAMES,
     DATA_STRUCTURE_OPERATIONS,
 )
 from app.ui.sidebar import Sidebar
 from app.ui.visualization_panel import VisualizationPanel
 from data_structures.array import Array, ArrayError, ArrayIndexError, ArrayValueError, ArrayEmptyError
 from data_structures.stack import Stack, StackError, StackEmptyError, StackValueError
+from data_structures.queue import Queue, QueueError, QueueEmptyError, QueueValueError
 from visualization.array_visualizer import ArrayVisualizer
 from visualization.stack_visualizer import StackVisualizer
+from visualization.queue_visualizer import QueueVisualizer
 
 
 class MainWindow(QMainWindow):
@@ -39,6 +43,8 @@ class MainWindow(QMainWindow):
         self._array_visualizer = None
         self._stack = None
         self._stack_visualizer = None
+        self._queue = None
+        self._queue_visualizer = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -150,6 +156,8 @@ class MainWindow(QMainWindow):
             self._setup_array()
         elif name == "Stack":
             self._setup_stack()
+        elif name == "Queue":
+            self._setup_queue()
         else:
             self._visualization_panel.set_data_structure(name)
             self._status_bar.showMessage(f"Selected: {name}")
@@ -181,11 +189,22 @@ class MainWindow(QMainWindow):
         self._operation_combo.addItems(STACK_OPERATION_NAMES)
         self._on_operation_changed(STACK_OPERATION_NAMES[0])
 
+    def _setup_queue(self):
+        self._queue = Queue()
+        self._create_queue_visualizer()
+        self._status_bar.showMessage("Selected: Queue")
+        self._enable_controls()
+
+        self._operation_combo.clear()
+        self._operation_combo.addItems(QUEUE_OPERATION_NAMES)
+        self._on_operation_changed(QUEUE_OPERATION_NAMES[0])
+
     def _create_array_visualizer(self):
         center_widget = self._visualization_panel.parent()
         if center_widget:
             center_layout = center_widget.layout()
             if center_layout:
+                self._remove_current_visualizer(center_layout)
                 center_layout.removeWidget(self._visualization_panel)
                 self._visualization_panel.hide()
 
@@ -200,6 +219,7 @@ class MainWindow(QMainWindow):
         if center_widget:
             center_layout = center_widget.layout()
             if center_layout:
+                self._remove_current_visualizer(center_layout)
                 center_layout.removeWidget(self._visualization_panel)
                 self._visualization_panel.hide()
 
@@ -208,6 +228,36 @@ class MainWindow(QMainWindow):
 
         if center_widget and center_layout:
             center_layout.insertWidget(0, self._stack_visualizer, 1)
+
+    def _create_queue_visualizer(self):
+        center_widget = self._visualization_panel.parent()
+        if center_widget:
+            center_layout = center_widget.layout()
+            if center_layout:
+                self._remove_current_visualizer(center_layout)
+                center_layout.removeWidget(self._visualization_panel)
+                self._visualization_panel.hide()
+
+        self._queue_visualizer = QueueVisualizer()
+        self._queue_visualizer.set_queue(self._queue.traverse())
+
+        if center_widget and center_layout:
+            center_layout.insertWidget(0, self._queue_visualizer, 1)
+
+    def _remove_current_visualizer(self, center_layout):
+        """Remove any currently displayed visualizer from the layout."""
+        if self._array_visualizer:
+            center_layout.removeWidget(self._array_visualizer)
+            self._array_visualizer.deleteLater()
+            self._array_visualizer = None
+        if self._stack_visualizer:
+            center_layout.removeWidget(self._stack_visualizer)
+            self._stack_visualizer.deleteLater()
+            self._stack_visualizer = None
+        if self._queue_visualizer:
+            center_layout.removeWidget(self._queue_visualizer)
+            self._queue_visualizer.deleteLater()
+            self._queue_visualizer = None
 
     def _enable_controls(self):
         self._operation_combo.setEnabled(True)
@@ -223,6 +273,8 @@ class MainWindow(QMainWindow):
             op_info = ARRAY_OPERATIONS.get(operation)
         elif self._current_data_structure == "Stack":
             op_info = STACK_OPERATIONS.get(operation)
+        elif self._current_data_structure == "Queue":
+            op_info = QUEUE_OPERATIONS.get(operation)
         else:
             return
 
@@ -258,6 +310,8 @@ class MainWindow(QMainWindow):
             self._execute_array_operation(operation, value_text)
         elif self._current_data_structure == "Stack":
             self._execute_stack_operation(operation, value_text)
+        elif self._current_data_structure == "Queue":
+            self._execute_queue_operation(operation, value_text)
 
     def _execute_array_operation(self, operation: str, value_text: str):
         try:
@@ -455,7 +509,7 @@ class MainWindow(QMainWindow):
             raise StackValueError("Value required for Push")
         value = self._parse_value(value_text)
         self._stack.push(value)
-        self._stack_visualizer.set_stack(self._stack.traverse())
+        self._stack_visualizer.set_stack(self._stack.traverse(), preserve_highlights=True)
         self._stack_visualizer.mark_new_top()
         self._stack_visualizer.set_feedback(f"Pushed {value} onto the stack.")
         op_info = STACK_OPERATIONS["Push"]
@@ -463,14 +517,16 @@ class MainWindow(QMainWindow):
 
     def _execute_pop(self):
         popped_value = self._stack.pop()
-        self._stack_visualizer.set_stack(self._stack.traverse())
+        remaining = self._stack.traverse()
+        self._stack_visualizer.set_stack(remaining, preserve_highlights=True)
+        self._stack_visualizer.mark_popped(popped_value)
         self._stack_visualizer.set_feedback(f"Popped {popped_value} from the stack.")
         op_info = STACK_OPERATIONS["Pop"]
         self._update_status("Pop", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_peek(self):
         value = self._stack.peek()
-        self._stack_visualizer.set_stack(self._stack.traverse())
+        self._stack_visualizer.set_stack(self._stack.traverse(), preserve_highlights=True)
         self._stack_visualizer.highlight_top()
         self._stack_visualizer.set_feedback(f"Top of stack: {value}")
         op_info = STACK_OPERATIONS["Peek"]
@@ -479,14 +535,14 @@ class MainWindow(QMainWindow):
     def _execute_is_empty(self):
         empty = self._stack.is_empty()
         msg = "Stack is empty." if empty else "Stack is not empty."
-        self._stack_visualizer.set_stack(self._stack.traverse())
+        self._stack_visualizer.set_stack(self._stack.traverse(), preserve_highlights=True)
         self._stack_visualizer.set_feedback(msg)
         op_info = STACK_OPERATIONS["Is Empty"]
         self._update_status("Is Empty", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_size(self):
         sz = self._stack.size()
-        self._stack_visualizer.set_stack(self._stack.traverse())
+        self._stack_visualizer.set_stack(self._stack.traverse(), preserve_highlights=True)
         self._stack_visualizer.set_feedback(f"Stack size: {sz}")
         op_info = STACK_OPERATIONS["Size"]
         self._update_status("Size", op_info["time_complexity"], op_info["space_complexity"])
@@ -498,7 +554,7 @@ class MainWindow(QMainWindow):
         else:
             traversal_str = " → ".join(str(x) for x in elements)
             self._stack_visualizer.set_feedback(f"TOP → {traversal_str} → BOTTOM")
-        self._stack_visualizer.set_stack(elements)
+        self._stack_visualizer.set_stack(elements, preserve_highlights=True)
         op_info = STACK_OPERATIONS["Traverse"]
         self._update_status("Traverse", op_info["time_complexity"], op_info["space_complexity"])
 
@@ -508,6 +564,112 @@ class MainWindow(QMainWindow):
         self._stack_visualizer.clear_highlights()
         self._stack_visualizer.set_feedback("Stack cleared.")
         op_info = STACK_OPERATIONS["Clear"]
+        self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
+
+    # ============================================================
+    # QUEUE OPERATIONS
+    # ============================================================
+
+    def _execute_queue_operation(self, operation: str, value_text: str):
+        try:
+            if operation == "Enqueue":
+                self._execute_enqueue(value_text)
+            elif operation == "Dequeue":
+                self._execute_dequeue()
+            elif operation == "Front":
+                self._execute_front()
+            elif operation == "Rear":
+                self._execute_rear()
+            elif operation == "Is Empty":
+                self._execute_queue_is_empty()
+            elif operation == "Size":
+                self._execute_queue_size()
+            elif operation == "Traverse":
+                self._execute_queue_traverse()
+            elif operation == "Clear":
+                self._execute_queue_clear()
+        except QueueError as e:
+            self._show_error(self._format_queue_error(e, operation))
+            self._status_bar.showMessage(f"Error: {e}")
+
+    def _format_queue_error(self, error: QueueError, operation: str) -> str:
+        if isinstance(error, QueueEmptyError):
+            empty_messages = {
+                "Dequeue": "Cannot dequeue: the queue is empty.",
+                "Front": "Cannot get front: the queue is empty.",
+                "Rear": "Cannot get rear: the queue is empty.",
+            }
+            return empty_messages.get(operation, str(error))
+        return str(error)
+
+    def _execute_enqueue(self, value_text: str):
+        if not value_text:
+            raise QueueValueError("Value required for Enqueue")
+        value = self._parse_value(value_text)
+        self._queue.enqueue(value)
+        self._queue_visualizer.set_queue(self._queue.traverse(), preserve_highlights=True)
+        self._queue_visualizer.mark_new_rear()
+        self._queue_visualizer.set_feedback(f"Enqueued {value} at the rear.")
+        op_info = QUEUE_OPERATIONS["Enqueue"]
+        self._update_status("Enqueue", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_dequeue(self):
+        dequeued_value = self._queue.dequeue()
+        remaining = self._queue.traverse()
+        self._queue_visualizer.set_queue(remaining, preserve_highlights=True)
+        self._queue_visualizer.mark_dequeued(dequeued_value)
+        self._queue_visualizer.set_feedback(f"Dequeued {dequeued_value} from the front.")
+        op_info = QUEUE_OPERATIONS["Dequeue"]
+        self._update_status("Dequeue", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_front(self):
+        value = self._queue.front()
+        self._queue_visualizer.set_queue(self._queue.traverse(), preserve_highlights=True)
+        self._queue_visualizer.highlight_front()
+        self._queue_visualizer.set_feedback(f"Front element: {value}.")
+        op_info = QUEUE_OPERATIONS["Front"]
+        self._update_status("Front", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_rear(self):
+        value = self._queue.rear()
+        self._queue_visualizer.set_queue(self._queue.traverse(), preserve_highlights=True)
+        self._queue_visualizer.highlight_rear()
+        self._queue_visualizer.set_feedback(f"Rear element: {value}.")
+        op_info = QUEUE_OPERATIONS["Rear"]
+        self._update_status("Rear", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_queue_is_empty(self):
+        empty = self._queue.is_empty()
+        msg = "Queue is empty." if empty else "Queue is not empty."
+        self._queue_visualizer.set_queue(self._queue.traverse(), preserve_highlights=True)
+        self._queue_visualizer.set_feedback(msg)
+        op_info = QUEUE_OPERATIONS["Is Empty"]
+        self._update_status("Is Empty", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_queue_size(self):
+        sz = self._queue.size()
+        self._queue_visualizer.set_queue(self._queue.traverse(), preserve_highlights=True)
+        self._queue_visualizer.set_feedback(f"Queue size = {sz}.")
+        op_info = QUEUE_OPERATIONS["Size"]
+        self._update_status("Size", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_queue_traverse(self):
+        elements = self._queue.traverse()
+        if not elements:
+            self._queue_visualizer.set_feedback("Queue is empty.")
+        else:
+            traversal_str = " → ".join(str(x) for x in elements)
+            self._queue_visualizer.set_feedback(f"Traversal (FRONT → REAR): {traversal_str}")
+        self._queue_visualizer.set_queue(elements, preserve_highlights=True)
+        op_info = QUEUE_OPERATIONS["Traverse"]
+        self._update_status("Traverse", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_queue_clear(self):
+        self._queue.clear()
+        self._queue_visualizer.set_queue([])
+        self._queue_visualizer.clear_highlights()
+        self._queue_visualizer.set_feedback("Queue cleared.")
+        op_info = QUEUE_OPERATIONS["Clear"]
         self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
 
     def _update_status(self, operation: str, time_complexity: str, space_complexity: str):
@@ -537,6 +699,15 @@ class MainWindow(QMainWindow):
                     self._stack_visualizer.deleteLater()
                     self._stack_visualizer = None
 
+        if self._queue_visualizer:
+            center_widget = self._visualization_panel.parent()
+            if center_widget:
+                center_layout = center_widget.layout()
+                if center_layout:
+                    center_layout.removeWidget(self._queue_visualizer)
+                    self._queue_visualizer.deleteLater()
+                    self._queue_visualizer = None
+
         self._visualization_panel.show()
         center_widget = self._visualization_panel.parent()
         if center_widget:
@@ -546,6 +717,7 @@ class MainWindow(QMainWindow):
 
         self._array = None
         self._stack = None
+        self._queue = None
         self._current_data_structure = None
         self._visualization_panel.reset()
         self._operation_combo.clear()

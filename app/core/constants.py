@@ -476,10 +476,79 @@ STACK_OPERATIONS = {
 
 STACK_OPERATION_NAMES = list(STACK_OPERATIONS.keys())
 
+QUEUE_OPERATIONS = {
+    "Enqueue": {
+        "input_type": "value",
+        "input_label": "Value",
+        "placeholder": "Enter value to enqueue (e.g. 50)",
+        "description": "Enqueue adds a value to the rear of the queue.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1) auxiliary",
+    },
+    "Dequeue": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Dequeue removes and returns the front value.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Front": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Front returns the front value without removing it.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Rear": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Rear returns the rear value without removing it.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Is Empty": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Check if the queue is empty.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Size": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Return the number of elements in the queue.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Traverse": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Display all elements from FRONT to REAR.",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(1) auxiliary",
+    },
+    "Clear": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Clear removes all elements from the queue.",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(1) auxiliary",
+    },
+}
+
+QUEUE_OPERATION_NAMES = list(QUEUE_OPERATIONS.keys())
+
 DATA_STRUCTURE_OPERATIONS = {
     "Array": ARRAY_OPERATION_NAMES,
     "Stack": STACK_OPERATION_NAMES,
-    "Queue": ["Enqueue", "Dequeue", "Front", "Is Empty"],
+    "Queue": QUEUE_OPERATION_NAMES,
     "Linked List": ["Insert at Head", "Insert at Tail", "Delete", "Search"],
     "Binary Search Tree": ["Insert", "Delete", "Search", "Inorder Traversal"],
     "Heap": ["Insert", "Extract Max/Min", "Peek", "Heapify"],
