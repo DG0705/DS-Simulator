@@ -37,8 +37,17 @@ The goal of this project is to create an interactive educational tool that helps
 - [x] Error handling for invalid inputs
 - [x] Unit tests (`tests/test_array.py`)
 
+**Phase 3 - Stack Visualization (COMPLETED):**
+- [x] Stack data structure implementation (`data_structures/stack.py`)
+- [x] Stack visualization with vertical layout (`visualization/stack_visualizer.py`)
+- [x] Stack operations: Push, Pop, Peek, Is Empty, Size, Traverse, Clear
+- [x] TOP/BOTTOM indicators with arrow
+- [x] Visual highlighting for operations
+- [x] Operation feedback with time/space complexity
+- [x] Error handling for invalid inputs
+- [x] Unit tests (`tests/test_stack.py`)
+
 **Upcoming Phases:**
-- [ ] Phase 3: Stack visualization
 - [ ] Phase 4: Queue visualization
 - [ ] Phase 5: Linked List visualization
 - [ ] Phase 6: Binary Search Tree visualization
@@ -77,8 +86,11 @@ python -m pytest tests/
 # Run Array tests specifically
 python -m pytest tests/test_array.py -v
 
+# Run Stack tests specifically
+python -m pytest tests/test_stack.py -v
+
 # Run with unittest
-python -m unittest tests.test_array -v
+python -m unittest tests.test_array tests.test_stack -v
 ```
 
 ## Array Visualization
@@ -129,6 +141,43 @@ The Value input field shows contextual placeholder text for each operation.
 | Traverse | O(n) | O(1) auxiliary |
 | Clear | O(n) | O(1) auxiliary |
 
+## Stack Visualization
+
+The Stack module is the second fully functional data structure in the application.
+
+### Supported Operations
+
+| Operation | Description | Input Format |
+|-----------|-------------|--------------|
+| **Push** | Add element to top | `42` (value only) |
+| **Pop** | Remove and return top | (no input required) |
+| **Peek** | View top without removing | (no input required) |
+| **Is Empty** | Check if stack is empty | (no input required) |
+| **Size** | Return element count | (no input required) |
+| **Traverse** | Display all elements | (no input required) |
+| **Clear** | Remove all elements | (no input required) |
+
+### Visual Features
+
+- Stack displayed vertically with TOP indicator and arrow
+- Elements shown as horizontal cells
+- TOP → BOTTOM traversal order
+- Blue highlight for Peek (top element)
+- Green highlight for newly pushed elements
+- Operation feedback displayed below visualization
+
+### Time & Space Complexity
+
+| Operation | Time Complexity | Space Complexity |
+|-----------|-----------------|------------------|
+| Push | O(1) amortized | O(1) auxiliary |
+| Pop | O(1) | O(1) |
+| Peek | O(1) | O(1) |
+| Is Empty | O(1) | O(1) |
+| Size | O(1) | O(1) |
+| Traverse | O(n) | O(1) auxiliary |
+| Clear | O(n) | O(1) auxiliary |
+
 ## Project Structure
 
 ```
@@ -148,15 +197,18 @@ DataStructureVisualizer/
 │       └── constants.py   # Application constants and styles
 ├── data_structures/       # Data structure implementations
 │   ├── __init__.py
-│   └── array.py           # Array implementation
+│   ├── array.py           # Array implementation
+│   └── stack.py           # Stack implementation
 ├── algorithms/            # Algorithm implementations (future)
 │   └── __init__.py
 ├── visualization/         # Visualization utilities
 │   ├── __init__.py
-│   └── array_visualizer.py  # Array visualization widget
+│   ├── array_visualizer.py  # Array visualization widget
+│   └── stack_visualizer.py  # Stack visualization widget
 └── tests/                 # Unit tests
     ├── __init__.py
-    └── test_array.py      # Array unit tests
+    ├── test_array.py      # Array unit tests
+    └── test_stack.py      # Stack unit tests
 ```
 
 ## Architecture Overview
@@ -167,8 +219,11 @@ DataStructureVisualizer/
 - **app/ui/visualization_panel.py**: Central area for visualizations (placeholder)
 - **app/core/constants.py**: All reusable constants, styles, and configuration
 - **data_structures/array.py**: Pure Python Array implementation (no GUI dependencies)
+- **data_structures/stack.py**: Pure Python Stack implementation (no GUI dependencies)
 - **visualization/array_visualizer.py**: PyQt6 widget for Array visualization
+- **visualization/stack_visualizer.py**: PyQt6 widget for Stack visualization
 - **tests/test_array.py**: Unit tests for Array data structure
+- **tests/test_stack.py**: Unit tests for Stack data structure
 
 The codebase follows separation of concerns - UI code is separate from data structure logic, making it easy to extend.
 

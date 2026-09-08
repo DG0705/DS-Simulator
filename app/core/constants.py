@@ -415,14 +415,70 @@ ARRAY_OPERATIONS = {
 
 ARRAY_OPERATION_NAMES = list(ARRAY_OPERATIONS.keys())
 
-# Future: Other data structure operations can be added here
-# STACK_OPERATIONS = {...}
-# QUEUE_OPERATIONS = {...}
-# etc.
+STACK_OPERATIONS = {
+    "Push": {
+        "input_type": "value",
+        "input_label": "Value",
+        "placeholder": "Enter value to push (e.g. 42)",
+        "description": "Push adds a value to the top of the stack.",
+        "time_complexity": "O(1) amortized",
+        "space_complexity": "O(1) auxiliary",
+    },
+    "Pop": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Pop removes and returns the top value.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Peek": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Peek returns the top value without removing it.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Is Empty": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Check if the stack is empty.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Size": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Return the number of elements in the stack.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Traverse": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Display all elements from TOP to BOTTOM.",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(1) auxiliary",
+    },
+    "Clear": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Clear removes all elements from the stack.",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(1) auxiliary",
+    },
+}
+
+STACK_OPERATION_NAMES = list(STACK_OPERATIONS.keys())
 
 DATA_STRUCTURE_OPERATIONS = {
     "Array": ARRAY_OPERATION_NAMES,
-    "Stack": ["Push", "Pop", "Peek", "Is Empty"],
+    "Stack": STACK_OPERATION_NAMES,
     "Queue": ["Enqueue", "Dequeue", "Front", "Is Empty"],
     "Linked List": ["Insert at Head", "Insert at Tail", "Delete", "Search"],
     "Binary Search Tree": ["Insert", "Delete", "Search", "Inorder Traversal"],

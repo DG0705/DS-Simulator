@@ -19,12 +19,16 @@ from app.core.constants import (
     NO_OPERATION_SELECTED,
     ARRAY_OPERATIONS,
     ARRAY_OPERATION_NAMES,
+    STACK_OPERATIONS,
+    STACK_OPERATION_NAMES,
     DATA_STRUCTURE_OPERATIONS,
 )
 from app.ui.sidebar import Sidebar
 from app.ui.visualization_panel import VisualizationPanel
 from data_structures.array import Array, ArrayError, ArrayIndexError, ArrayValueError, ArrayEmptyError
+from data_structures.stack import Stack, StackError, StackEmptyError, StackValueError
 from visualization.array_visualizer import ArrayVisualizer
+from visualization.stack_visualizer import StackVisualizer
 
 
 class MainWindow(QMainWindow):
@@ -33,6 +37,8 @@ class MainWindow(QMainWindow):
         self._current_data_structure = None
         self._array = None
         self._array_visualizer = None
+        self._stack = None
+        self._stack_visualizer = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -142,6 +148,8 @@ class MainWindow(QMainWindow):
 
         if name == "Array":
             self._setup_array()
+        elif name == "Stack":
+            self._setup_stack()
         else:
             self._visualization_panel.set_data_structure(name)
             self._status_bar.showMessage(f"Selected: {name}")
@@ -163,6 +171,16 @@ class MainWindow(QMainWindow):
         self._operation_combo.addItems(ARRAY_OPERATION_NAMES)
         self._on_operation_changed(ARRAY_OPERATION_NAMES[0])
 
+    def _setup_stack(self):
+        self._stack = Stack()
+        self._create_stack_visualizer()
+        self._status_bar.showMessage("Selected: Stack")
+        self._enable_controls()
+
+        self._operation_combo.clear()
+        self._operation_combo.addItems(STACK_OPERATION_NAMES)
+        self._on_operation_changed(STACK_OPERATION_NAMES[0])
+
     def _create_array_visualizer(self):
         center_widget = self._visualization_panel.parent()
         if center_widget:
@@ -177,6 +195,20 @@ class MainWindow(QMainWindow):
         if center_widget and center_layout:
             center_layout.insertWidget(0, self._array_visualizer, 1)
 
+    def _create_stack_visualizer(self):
+        center_widget = self._visualization_panel.parent()
+        if center_widget:
+            center_layout = center_widget.layout()
+            if center_layout:
+                center_layout.removeWidget(self._visualization_panel)
+                self._visualization_panel.hide()
+
+        self._stack_visualizer = StackVisualizer()
+        self._stack_visualizer.set_stack(self._stack.traverse())
+
+        if center_widget and center_layout:
+            center_layout.insertWidget(0, self._stack_visualizer, 1)
+
     def _enable_controls(self):
         self._operation_combo.setEnabled(True)
         self._value_input.setEnabled(True)
@@ -184,10 +216,16 @@ class MainWindow(QMainWindow):
         self._reset_button.setEnabled(True)
 
     def _on_operation_changed(self, operation: str):
-        if not self._current_data_structure or self._current_data_structure != "Array":
+        if not self._current_data_structure:
             return
 
-        op_info = ARRAY_OPERATIONS.get(operation)
+        if self._current_data_structure == "Array":
+            op_info = ARRAY_OPERATIONS.get(operation)
+        elif self._current_data_structure == "Stack":
+            op_info = STACK_OPERATIONS.get(operation)
+        else:
+            return
+
         if not op_info:
             return
 
@@ -218,11 +256,8 @@ class MainWindow(QMainWindow):
 
         if self._current_data_structure == "Array":
             self._execute_array_operation(operation, value_text)
-        else:
-            msg = f"Executing: {operation}"
-            if value_text:
-                msg += f" with value: {value_text}"
-            self._status_bar.showMessage(msg)
+        elif self._current_data_structure == "Stack":
+            self._execute_stack_operation(operation, value_text)
 
     def _execute_array_operation(self, operation: str, value_text: str):
         try:
@@ -382,6 +417,99 @@ class MainWindow(QMainWindow):
         op_info = ARRAY_OPERATIONS["Clear"]
         self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
 
+    # ============================================================
+    # STACK OPERATIONS
+    # ============================================================
+
+    def _execute_stack_operation(self, operation: str, value_text: str):
+        try:
+            if operation == "Push":
+                self._execute_push(value_text)
+            elif operation == "Pop":
+                self._execute_pop()
+            elif operation == "Peek":
+                self._execute_peek()
+            elif operation == "Is Empty":
+                self._execute_is_empty()
+            elif operation == "Size":
+                self._execute_size()
+            elif operation == "Traverse":
+                self._execute_stack_traverse()
+            elif operation == "Clear":
+                self._execute_stack_clear()
+        except StackError as e:
+            self._show_error(self._format_stack_error(e, operation))
+            self._status_bar.showMessage(f"Error: {e}")
+
+    def _format_stack_error(self, error: StackError, operation: str) -> str:
+        if isinstance(error, StackEmptyError):
+            empty_messages = {
+                "Pop": "Cannot pop: the stack is empty.",
+                "Peek": "Cannot peek: the stack is empty.",
+            }
+            return empty_messages.get(operation, str(error))
+        return str(error)
+
+    def _execute_push(self, value_text: str):
+        if not value_text:
+            raise StackValueError("Value required for Push")
+        value = self._parse_value(value_text)
+        self._stack.push(value)
+        self._stack_visualizer.set_stack(self._stack.traverse())
+        self._stack_visualizer.mark_new_top()
+        self._stack_visualizer.set_feedback(f"Pushed {value} onto the stack.")
+        op_info = STACK_OPERATIONS["Push"]
+        self._update_status("Push", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_pop(self):
+        popped_value = self._stack.pop()
+        self._stack_visualizer.set_stack(self._stack.traverse())
+        self._stack_visualizer.set_feedback(f"Popped {popped_value} from the stack.")
+        op_info = STACK_OPERATIONS["Pop"]
+        self._update_status("Pop", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_peek(self):
+        value = self._stack.peek()
+        self._stack_visualizer.set_stack(self._stack.traverse())
+        self._stack_visualizer.highlight_top()
+        self._stack_visualizer.set_feedback(f"Top of stack: {value}")
+        op_info = STACK_OPERATIONS["Peek"]
+        self._update_status("Peek", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_is_empty(self):
+        empty = self._stack.is_empty()
+        msg = "Stack is empty." if empty else "Stack is not empty."
+        self._stack_visualizer.set_stack(self._stack.traverse())
+        self._stack_visualizer.set_feedback(msg)
+        op_info = STACK_OPERATIONS["Is Empty"]
+        self._update_status("Is Empty", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_size(self):
+        sz = self._stack.size()
+        self._stack_visualizer.set_stack(self._stack.traverse())
+        self._stack_visualizer.set_feedback(f"Stack size: {sz}")
+        op_info = STACK_OPERATIONS["Size"]
+        self._update_status("Size", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_stack_traverse(self):
+        elements = self._stack.traverse()
+        if not elements:
+            self._stack_visualizer.set_feedback("Stack is empty.")
+        else:
+            traversal_str = " → ".join(str(x) for x in elements)
+            self._stack_visualizer.set_feedback(f"TOP → {traversal_str} → BOTTOM")
+        self._stack_visualizer.set_stack(elements)
+        op_info = STACK_OPERATIONS["Traverse"]
+        self._update_status("Traverse", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_stack_clear(self):
+        self._stack.clear()
+        self._stack_visualizer.set_stack([])
+        self._stack_visualizer.clear_highlights()
+        self._stack_visualizer.set_feedback("Stack cleared.")
+        op_info = STACK_OPERATIONS["Clear"]
+        self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
+
     def _update_status(self, operation: str, time_complexity: str, space_complexity: str):
         self._status_bar.showMessage(
             f"Operation: {operation} | Time: {time_complexity} | Space: {space_complexity}"
@@ -400,11 +528,24 @@ class MainWindow(QMainWindow):
                     self._array_visualizer.deleteLater()
                     self._array_visualizer = None
 
+        if self._stack_visualizer:
+            center_widget = self._visualization_panel.parent()
+            if center_widget:
+                center_layout = center_widget.layout()
+                if center_layout:
+                    center_layout.removeWidget(self._stack_visualizer)
+                    self._stack_visualizer.deleteLater()
+                    self._stack_visualizer = None
+
         self._visualization_panel.show()
-        if center_widget and center_layout:
-            center_layout.insertWidget(0, self._visualization_panel, 1)
+        center_widget = self._visualization_panel.parent()
+        if center_widget:
+            center_layout = center_widget.layout()
+            if center_layout:
+                center_layout.insertWidget(0, self._visualization_panel, 1)
 
         self._array = None
+        self._stack = None
         self._current_data_structure = None
         self._visualization_panel.reset()
         self._operation_combo.clear()

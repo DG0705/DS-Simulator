@@ -50,8 +50,9 @@ class Sidebar(QWidget):
         scroll_layout.addWidget(section_label)
 
         self._buttons = {}
+        enabled_structures = {"Array", "Stack"}
         for ds_name in DATA_STRUCTURES:
-            if ds_name == "Array":
+            if ds_name in enabled_structures:
                 button = self._create_enabled_button(ds_name)
             else:
                 button = self._create_placeholder_button(ds_name)
