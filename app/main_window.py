@@ -23,6 +23,8 @@ from app.core.constants import (
     STACK_OPERATION_NAMES,
     QUEUE_OPERATIONS,
     QUEUE_OPERATION_NAMES,
+    LINKED_LIST_OPERATIONS,
+    LINKED_LIST_OPERATION_NAMES,
     DATA_STRUCTURE_OPERATIONS,
 )
 from app.ui.sidebar import Sidebar
@@ -30,9 +32,14 @@ from app.ui.visualization_panel import VisualizationPanel
 from data_structures.array import Array, ArrayError, ArrayIndexError, ArrayValueError, ArrayEmptyError
 from data_structures.stack import Stack, StackError, StackEmptyError, StackValueError
 from data_structures.queue import Queue, QueueError, QueueEmptyError, QueueValueError
+from data_structures.linked_list import (
+    SinglyLinkedList, LinkedListError, LinkedListEmptyError,
+    LinkedListIndexError, LinkedListValueError,
+)
 from visualization.array_visualizer import ArrayVisualizer
 from visualization.stack_visualizer import StackVisualizer
 from visualization.queue_visualizer import QueueVisualizer
+from visualization.linked_list_visualizer import LinkedListVisualizer
 
 
 class MainWindow(QMainWindow):
@@ -45,6 +52,8 @@ class MainWindow(QMainWindow):
         self._stack_visualizer = None
         self._queue = None
         self._queue_visualizer = None
+        self._linked_list = None
+        self._linked_list_visualizer = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -158,6 +167,8 @@ class MainWindow(QMainWindow):
             self._setup_stack()
         elif name == "Queue":
             self._setup_queue()
+        elif name == "Linked List":
+            self._setup_linked_list()
         else:
             self._visualization_panel.set_data_structure(name)
             self._status_bar.showMessage(f"Selected: {name}")
@@ -198,6 +209,16 @@ class MainWindow(QMainWindow):
         self._operation_combo.clear()
         self._operation_combo.addItems(QUEUE_OPERATION_NAMES)
         self._on_operation_changed(QUEUE_OPERATION_NAMES[0])
+
+    def _setup_linked_list(self):
+        self._linked_list = SinglyLinkedList()
+        self._create_linked_list_visualizer()
+        self._status_bar.showMessage("Selected: Linked List")
+        self._enable_controls()
+
+        self._operation_combo.clear()
+        self._operation_combo.addItems(LINKED_LIST_OPERATION_NAMES)
+        self._on_operation_changed(LINKED_LIST_OPERATION_NAMES[0])
 
     def _create_array_visualizer(self):
         center_widget = self._visualization_panel.parent()
@@ -244,6 +265,21 @@ class MainWindow(QMainWindow):
         if center_widget and center_layout:
             center_layout.insertWidget(0, self._queue_visualizer, 1)
 
+    def _create_linked_list_visualizer(self):
+        center_widget = self._visualization_panel.parent()
+        if center_widget:
+            center_layout = center_widget.layout()
+            if center_layout:
+                self._remove_current_visualizer(center_layout)
+                center_layout.removeWidget(self._visualization_panel)
+                self._visualization_panel.hide()
+
+        self._linked_list_visualizer = LinkedListVisualizer()
+        self._linked_list_visualizer.set_list(self._linked_list.traverse())
+
+        if center_widget and center_layout:
+            center_layout.insertWidget(0, self._linked_list_visualizer, 1)
+
     def _remove_current_visualizer(self, center_layout):
         """Remove any currently displayed visualizer from the layout."""
         if self._array_visualizer:
@@ -258,6 +294,10 @@ class MainWindow(QMainWindow):
             center_layout.removeWidget(self._queue_visualizer)
             self._queue_visualizer.deleteLater()
             self._queue_visualizer = None
+        if self._linked_list_visualizer:
+            center_layout.removeWidget(self._linked_list_visualizer)
+            self._linked_list_visualizer.deleteLater()
+            self._linked_list_visualizer = None
 
     def _enable_controls(self):
         self._operation_combo.setEnabled(True)
@@ -275,6 +315,8 @@ class MainWindow(QMainWindow):
             op_info = STACK_OPERATIONS.get(operation)
         elif self._current_data_structure == "Queue":
             op_info = QUEUE_OPERATIONS.get(operation)
+        elif self._current_data_structure == "Linked List":
+            op_info = LINKED_LIST_OPERATIONS.get(operation)
         else:
             return
 
@@ -312,6 +354,8 @@ class MainWindow(QMainWindow):
             self._execute_stack_operation(operation, value_text)
         elif self._current_data_structure == "Queue":
             self._execute_queue_operation(operation, value_text)
+        elif self._current_data_structure == "Linked List":
+            self._execute_linked_list_operation(operation, value_text)
 
     def _execute_array_operation(self, operation: str, value_text: str):
         try:
@@ -672,6 +716,223 @@ class MainWindow(QMainWindow):
         op_info = QUEUE_OPERATIONS["Clear"]
         self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
 
+    # ============================================================
+    # LINKED LIST OPERATIONS
+    # ============================================================
+
+    def _execute_linked_list_operation(self, operation: str, value_text: str):
+        try:
+            if operation == "Insert at Head":
+                self._execute_insert_at_head(value_text)
+            elif operation == "Insert at Tail":
+                self._execute_insert_at_tail(value_text)
+            elif operation == "Insert at Index":
+                self._execute_insert_at_index(value_text)
+            elif operation == "Delete Head":
+                self._execute_delete_head()
+            elif operation == "Delete Tail":
+                self._execute_delete_tail()
+            elif operation == "Delete at Index":
+                self._execute_delete_at_index(value_text)
+            elif operation == "Search":
+                self._execute_ll_search(value_text)
+            elif operation == "Update":
+                self._execute_ll_update(value_text)
+            elif operation == "Get":
+                self._execute_ll_get(value_text)
+            elif operation == "Traverse":
+                self._execute_ll_traverse()
+            elif operation == "Size":
+                self._execute_ll_size()
+            elif operation == "Is Empty":
+                self._execute_ll_is_empty()
+            elif operation == "Clear":
+                self._execute_ll_clear()
+        except LinkedListError as e:
+            self._show_error(self._format_ll_error(e, operation))
+            self._status_bar.showMessage(f"Error: {e}")
+
+    def _format_ll_error(self, error: LinkedListError, operation: str) -> str:
+        if isinstance(error, LinkedListEmptyError):
+            empty_messages = {
+                "Delete Head": "Cannot delete head: the linked list is empty.",
+                "Delete Tail": "Cannot delete tail: the linked list is empty.",
+                "Delete at Index": "Cannot delete from an empty linked list.",
+                "Search": "Cannot search an empty linked list.",
+                "Update": "Cannot update an empty linked list.",
+                "Get": "Cannot get from an empty linked list.",
+            }
+            return empty_messages.get(operation, str(error))
+        if isinstance(error, LinkedListIndexError):
+            error_str = str(error)
+            if "out of range" in error_str:
+                if self._linked_list:
+                    sz = self._linked_list.size()
+                    if operation == "Insert at Index":
+                        return f"Invalid insertion index. Valid indices are 0–{sz}."
+                    if sz > 0:
+                        return f"Invalid index. Valid indices are 0–{sz - 1}."
+                return "Invalid index. The linked list is empty."
+            return error_str
+        if isinstance(error, LinkedListValueError):
+            error_str = str(error)
+            if "not found" in error_str:
+                return error_str
+            if "Invalid format" in error_str:
+                return "Invalid format. Enter index,value (example: 2,50)."
+            if "must be integers" in error_str:
+                return "Invalid input. Please enter integers."
+            return error_str
+        return str(error)
+
+    def _parse_ll_index_value(self, text: str) -> tuple:
+        parts = [p.strip() for p in text.split(",")]
+        if len(parts) != 2:
+            raise LinkedListValueError("Invalid format. Use: index,value (e.g., 2,50)")
+        try:
+            index = int(parts[0])
+            value = int(parts[1])
+        except ValueError:
+            raise LinkedListValueError("Index and value must be integers")
+        return index, value
+
+    def _parse_ll_index(self, text: str) -> int:
+        try:
+            return int(text.strip())
+        except ValueError:
+            raise LinkedListValueError("Index must be an integer")
+
+    def _parse_ll_value(self, text: str) -> int:
+        try:
+            return int(text.strip())
+        except ValueError:
+            raise LinkedListValueError("Value must be an integer")
+
+    def _execute_insert_at_head(self, value_text: str):
+        if not value_text:
+            raise LinkedListValueError("Value required for Insert at Head")
+        value = self._parse_ll_value(value_text)
+        self._linked_list.insert_at_head(value)
+        self._linked_list_visualizer.set_list(self._linked_list.traverse(), preserve_highlights=True)
+        self._linked_list_visualizer.mark_new(0)
+        self._linked_list_visualizer.set_feedback(f"Inserted {value} at the head.")
+        op_info = LINKED_LIST_OPERATIONS["Insert at Head"]
+        self._update_status("Insert at Head", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_insert_at_tail(self, value_text: str):
+        if not value_text:
+            raise LinkedListValueError("Value required for Insert at Tail")
+        value = self._parse_ll_value(value_text)
+        self._linked_list.insert_at_tail(value)
+        new_idx = self._linked_list.size() - 1
+        self._linked_list_visualizer.set_list(self._linked_list.traverse(), preserve_highlights=True)
+        self._linked_list_visualizer.mark_new(new_idx)
+        self._linked_list_visualizer.set_feedback(f"Inserted {value} at the tail.")
+        op_info = LINKED_LIST_OPERATIONS["Insert at Tail"]
+        self._update_status("Insert at Tail", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_insert_at_index(self, value_text: str):
+        if not value_text:
+            raise LinkedListValueError("Index and value required for Insert at Index (format: index,value)")
+        index, value = self._parse_ll_index_value(value_text)
+        self._linked_list.insert_at_index(index, value)
+        self._linked_list_visualizer.set_list(self._linked_list.traverse(), preserve_highlights=True)
+        self._linked_list_visualizer.mark_new(index)
+        self._linked_list_visualizer.set_feedback(f"Inserted {value} at index {index}.")
+        op_info = LINKED_LIST_OPERATIONS["Insert at Index"]
+        self._update_status("Insert at Index", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_delete_head(self):
+        value = self._linked_list.delete_head()
+        self._linked_list_visualizer.set_list(self._linked_list.traverse())
+        self._linked_list_visualizer.set_feedback(f"Deleted head node containing {value}.")
+        op_info = LINKED_LIST_OPERATIONS["Delete Head"]
+        self._update_status("Delete Head", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_delete_tail(self):
+        value = self._linked_list.delete_tail()
+        self._linked_list_visualizer.set_list(self._linked_list.traverse())
+        self._linked_list_visualizer.set_feedback(f"Deleted tail node containing {value}.")
+        op_info = LINKED_LIST_OPERATIONS["Delete Tail"]
+        self._update_status("Delete Tail", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_delete_at_index(self, value_text: str):
+        if not value_text:
+            raise LinkedListValueError("Index required for Delete at Index")
+        index = self._parse_ll_index(value_text)
+        value = self._linked_list.delete_at_index(index)
+        self._linked_list_visualizer.set_list(self._linked_list.traverse())
+        self._linked_list_visualizer.set_feedback(f"Deleted node containing {value} from index {index}.")
+        op_info = LINKED_LIST_OPERATIONS["Delete at Index"]
+        self._update_status("Delete at Index", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_ll_search(self, value_text: str):
+        if not value_text:
+            raise LinkedListValueError("Value required for Search")
+        value = self._parse_ll_value(value_text)
+        index = self._linked_list.search(value)
+        self._linked_list_visualizer.set_list(self._linked_list.traverse(), preserve_highlights=True)
+        self._linked_list_visualizer.highlight_index(index)
+        self._linked_list_visualizer.set_feedback(f"Value {value} found at index {index}.")
+        op_info = LINKED_LIST_OPERATIONS["Search"]
+        self._update_status("Search", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_ll_update(self, value_text: str):
+        if not value_text:
+            raise LinkedListValueError("Index and value required for Update (format: index,value)")
+        index, value = self._parse_ll_index_value(value_text)
+        old_value = self._linked_list.update(index, value)
+        self._linked_list_visualizer.set_list(self._linked_list.traverse(), preserve_highlights=True)
+        self._linked_list_visualizer.highlight_index(index)
+        self._linked_list_visualizer.set_feedback(f"Updated index {index} from {old_value} to {value}.")
+        op_info = LINKED_LIST_OPERATIONS["Update"]
+        self._update_status("Update", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_ll_get(self, value_text: str):
+        if not value_text:
+            raise LinkedListValueError("Index required for Get")
+        index = self._parse_ll_index(value_text)
+        value = self._linked_list.get(index)
+        self._linked_list_visualizer.set_list(self._linked_list.traverse(), preserve_highlights=True)
+        self._linked_list_visualizer.highlight_index(index)
+        self._linked_list_visualizer.set_feedback(f"Node at index {index} contains {value}.")
+        op_info = LINKED_LIST_OPERATIONS["Get"]
+        self._update_status("Get", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_ll_traverse(self):
+        elements = self._linked_list.traverse()
+        if not elements:
+            self._linked_list_visualizer.set_feedback("Linked List is empty.")
+        else:
+            traversal_str = " → ".join(str(x) for x in elements)
+            self._linked_list_visualizer.set_feedback(f"Traversal (HEAD → TAIL): {traversal_str}")
+        self._linked_list_visualizer.set_list(elements, preserve_highlights=True)
+        op_info = LINKED_LIST_OPERATIONS["Traverse"]
+        self._update_status("Traverse", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_ll_size(self):
+        sz = self._linked_list.size()
+        self._linked_list_visualizer.set_list(self._linked_list.traverse(), preserve_highlights=True)
+        self._linked_list_visualizer.set_feedback(f"Linked List size = {sz}.")
+        op_info = LINKED_LIST_OPERATIONS["Size"]
+        self._update_status("Size", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_ll_is_empty(self):
+        empty = self._linked_list.is_empty()
+        msg = "Linked List is empty." if empty else "Linked List is not empty."
+        self._linked_list_visualizer.set_list(self._linked_list.traverse(), preserve_highlights=True)
+        self._linked_list_visualizer.set_feedback(msg)
+        op_info = LINKED_LIST_OPERATIONS["Is Empty"]
+        self._update_status("Is Empty", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_ll_clear(self):
+        self._linked_list.clear()
+        self._linked_list_visualizer.set_list([])
+        self._linked_list_visualizer.clear_highlights()
+        self._linked_list_visualizer.set_feedback("Linked List cleared.")
+        op_info = LINKED_LIST_OPERATIONS["Clear"]
+        self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
+
     def _update_status(self, operation: str, time_complexity: str, space_complexity: str):
         self._status_bar.showMessage(
             f"Operation: {operation} | Time: {time_complexity} | Space: {space_complexity}"
@@ -708,6 +969,15 @@ class MainWindow(QMainWindow):
                     self._queue_visualizer.deleteLater()
                     self._queue_visualizer = None
 
+        if self._linked_list_visualizer:
+            center_widget = self._visualization_panel.parent()
+            if center_widget:
+                center_layout = center_widget.layout()
+                if center_layout:
+                    center_layout.removeWidget(self._linked_list_visualizer)
+                    self._linked_list_visualizer.deleteLater()
+                    self._linked_list_visualizer = None
+
         self._visualization_panel.show()
         center_widget = self._visualization_panel.parent()
         if center_widget:
@@ -718,6 +988,7 @@ class MainWindow(QMainWindow):
         self._array = None
         self._stack = None
         self._queue = None
+        self._linked_list = None
         self._current_data_structure = None
         self._visualization_panel.reset()
         self._operation_combo.clear()

@@ -60,8 +60,20 @@ The goal of this project is to create an interactive educational tool that helps
 - [x] Error handling for invalid inputs
 - [x] Unit tests (`tests/test_queue.py`)
 
+**Phase 5 - Linked List Visualization (COMPLETED):**
+- [x] Singly Linked List implementation (`data_structures/linked_list.py`)
+- [x] Node class with data and next pointer
+- [x] Linked List visualization with horizontal nodes (`visualization/linked_list_visualizer.py`)
+- [x] Linked List operations: Insert at Head/Tail/Index, Delete Head/Tail/Index, Search, Update, Get, Traverse, Size, Is Empty, Clear
+- [x] HEAD/TAIL/NULL indicators with arrows
+- [x] Node visual design: [DATA | NEXT →]
+- [x] Visual highlighting for operations
+- [x] Operation feedback with time/space complexity
+- [x] Error handling for invalid inputs
+- [x] Horizontal scrolling for long lists
+- [x] Unit tests (`tests/test_linked_list.py`)
+
 **Upcoming Phases:**
-- [ ] Phase 5: Linked List visualization
 - [ ] Phase 6: Binary Search Tree visualization
 - [ ] Phase 7: Heap visualization
 - [ ] Phase 8: Graph visualization
@@ -104,8 +116,11 @@ python -m pytest tests/test_stack.py -v
 # Run Queue tests specifically
 python -m pytest tests/test_queue.py -v
 
+# Run Linked List tests specifically
+python -m pytest tests/test_linked_list.py -v
+
 # Run with unittest
-python -m unittest tests.test_array tests.test_stack tests.test_queue -v
+python -m unittest tests.test_array tests.test_stack tests.test_queue tests.test_linked_list -v
 ```
 
 ## Array Visualization
@@ -234,6 +249,70 @@ The Queue module is the third fully functional data structure in the application
 | Traverse | O(n) | O(1) auxiliary |
 | Clear | O(n) | O(1) auxiliary |
 
+## Linked List Visualization
+
+The Linked List module is the fourth fully functional data structure in the application.
+
+### Node Structure
+
+Each node contains:
+- **data**: The stored value
+- **next**: Pointer to the next node (None for the last node)
+
+### HEAD / TAIL / NULL
+
+- **HEAD**: Points to the first node
+- **TAIL**: Points to the last node
+- **NULL**: The last node's next pointer
+
+### Supported Operations
+
+| Operation | Description | Input Format |
+|-----------|-------------|--------------|
+| **Insert at Head** | Add node at the beginning | `50` (value only) |
+| **Insert at Tail** | Add node at the end | `50` (value only) |
+| **Insert at Index** | Add node at specific index | `2,50` (index,value) |
+| **Delete Head** | Remove the first node | (no input required) |
+| **Delete Tail** | Remove the last node | (no input required) |
+| **Delete at Index** | Remove node at index | `2` (index only) |
+| **Search** | Find value in list | `50` (value only) |
+| **Update** | Change value at index | `2,50` (index,value) |
+| **Get** | Retrieve value at index | `2` (index only) |
+| **Traverse** | Display all nodes | (no input required) |
+| **Size** | Return node count | (no input required) |
+| **Is Empty** | Check if list is empty | (no input required) |
+| **Clear** | Remove all nodes | (no input required) |
+
+### Visual Features
+
+- Nodes displayed horizontally with [DATA | NEXT →] design
+- Arrows between nodes represent next pointers
+- HEAD indicator pointing to first node
+- TAIL indicator pointing to last node
+- NULL label at the end of the list
+- Blue highlight for Search/Get operations
+- Green highlight for newly inserted nodes
+- Horizontal scrolling for long lists
+- Operation feedback displayed below visualization
+
+### Time & Space Complexity
+
+| Operation | Time Complexity | Space Complexity |
+|-----------|-----------------|------------------|
+| Insert at Head | O(1) | O(1) |
+| Insert at Tail | O(1) | O(1) |
+| Insert at Index | O(n) | O(1) |
+| Delete Head | O(1) | O(1) |
+| Delete Tail | O(n) | O(1) |
+| Delete at Index | O(n) | O(1) |
+| Search | O(n) | O(1) |
+| Update | O(n) | O(1) |
+| Get | O(n) | O(1) |
+| Traverse | O(n) | O(1) auxiliary |
+| Size | O(1) | O(1) |
+| Is Empty | O(1) | O(1) |
+| Clear | O(n) | O(1) auxiliary |
+
 ## Project Structure
 
 ```
@@ -255,19 +334,22 @@ DataStructureVisualizer/
 │   ├── __init__.py
 │   ├── array.py           # Array implementation
 │   ├── stack.py           # Stack implementation
-│   └── queue.py           # Queue implementation (collections.deque)
+│   ├── queue.py           # Queue implementation (collections.deque)
+│   └── linked_list.py     # Singly Linked List implementation
 ├── algorithms/            # Algorithm implementations (future)
 │   └── __init__.py
 ├── visualization/         # Visualization utilities
 │   ├── __init__.py
-│   ├── array_visualizer.py   # Array visualization widget
-│   ├── stack_visualizer.py   # Stack visualization widget
-│   └── queue_visualizer.py   # Queue visualization widget
+│   ├── array_visualizer.py     # Array visualization widget
+│   ├── stack_visualizer.py     # Stack visualization widget
+│   ├── queue_visualizer.py     # Queue visualization widget
+│   └── linked_list_visualizer.py  # Linked List visualization widget
 └── tests/                 # Unit tests
     ├── __init__.py
     ├── test_array.py      # Array unit tests
     ├── test_stack.py      # Stack unit tests
-    └── test_queue.py      # Queue unit tests
+    ├── test_queue.py      # Queue unit tests
+    └── test_linked_list.py  # Linked List unit tests
 ```
 
 ## Architecture Overview
@@ -280,12 +362,15 @@ DataStructureVisualizer/
 - **data_structures/array.py**: Pure Python Array implementation (no GUI dependencies)
 - **data_structures/stack.py**: Pure Python Stack implementation (no GUI dependencies)
 - **data_structures/queue.py**: Pure Python Queue implementation using collections.deque (no GUI dependencies)
+- **data_structures/linked_list.py**: Pure Python Singly Linked List implementation (no GUI dependencies)
 - **visualization/array_visualizer.py**: PyQt6 widget for Array visualization
 - **visualization/stack_visualizer.py**: PyQt6 widget for Stack visualization
 - **visualization/queue_visualizer.py**: PyQt6 widget for Queue visualization
+- **visualization/linked_list_visualizer.py**: PyQt6 widget for Linked List visualization
 - **tests/test_array.py**: Unit tests for Array data structure
 - **tests/test_stack.py**: Unit tests for Stack data structure
 - **tests/test_queue.py**: Unit tests for Queue data structure
+- **tests/test_linked_list.py**: Unit tests for Linked List data structure
 
 The codebase follows separation of concerns - UI code is separate from data structure logic, making it easy to extend.
 
