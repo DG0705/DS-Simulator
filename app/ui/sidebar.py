@@ -50,7 +50,7 @@ class Sidebar(QWidget):
         scroll_layout.addWidget(section_label)
 
         self._buttons = {}
-        enabled_structures = {"Array", "Stack", "Queue", "Linked List"}
+        enabled_structures = {"Array", "Stack", "Queue", "Linked List", "Binary Search Tree"}
         for ds_name in DATA_STRUCTURES:
             if ds_name in enabled_structures:
                 button = self._create_enabled_button(ds_name)

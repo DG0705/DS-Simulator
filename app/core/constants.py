@@ -654,12 +654,121 @@ LINKED_LIST_OPERATIONS = {
 
 LINKED_LIST_OPERATION_NAMES = list(LINKED_LIST_OPERATIONS.keys())
 
+BST_OPERATIONS = {
+    "Insert": {
+        "input_type": "value",
+        "input_label": "Value",
+        "placeholder": "Enter value (e.g. 50)",
+        "description": "Insert a value into the BST. Duplicates are not allowed.",
+        "time_complexity": "O(log n) average, O(n) worst",
+        "space_complexity": "O(log n) recursion stack",
+    },
+    "Delete": {
+        "input_type": "value",
+        "input_label": "Value",
+        "placeholder": "Enter value to delete (e.g. 50)",
+        "description": "Remove a value from the BST.",
+        "time_complexity": "O(log n) average, O(n) worst",
+        "space_complexity": "O(log n) recursion stack",
+    },
+    "Search": {
+        "input_type": "value",
+        "input_label": "Value",
+        "placeholder": "Enter value to search (e.g. 50)",
+        "description": "Find a value in the BST.",
+        "time_complexity": "O(log n) average, O(n) worst",
+        "space_complexity": "O(log n) recursion stack",
+    },
+    "Inorder Traversal": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Visit nodes in sorted order (Left → Root → Right).",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(h) recursion stack",
+    },
+    "Preorder Traversal": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Visit nodes in root-first order (Root → Left → Right).",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(h) recursion stack",
+    },
+    "Postorder Traversal": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Visit nodes in children-first order (Left → Right → Root).",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(h) recursion stack",
+    },
+    "Level Order Traversal": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Visit nodes level by level (BFS).",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(w) where w = max width",
+    },
+    "Find Minimum": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Find the minimum value in the BST.",
+        "time_complexity": "O(log n) average, O(n) worst",
+        "space_complexity": "O(1)",
+    },
+    "Find Maximum": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Find the maximum value in the BST.",
+        "time_complexity": "O(log n) average, O(n) worst",
+        "space_complexity": "O(1)",
+    },
+    "Height": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Return the height of the tree. Empty = 0, single node = 1.",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(h) recursion stack",
+    },
+    "Size": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Return the number of nodes.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Is Empty": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Check if the BST is empty.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Clear": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Remove all nodes from the BST.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+}
+
+BST_OPERATION_NAMES = list(BST_OPERATIONS.keys())
+
 DATA_STRUCTURE_OPERATIONS = {
     "Array": ARRAY_OPERATION_NAMES,
     "Stack": STACK_OPERATION_NAMES,
     "Queue": QUEUE_OPERATION_NAMES,
     "Linked List": LINKED_LIST_OPERATION_NAMES,
-    "Binary Search Tree": ["Insert", "Delete", "Search", "Inorder Traversal"],
+    "Binary Search Tree": BST_OPERATION_NAMES,
     "Heap": ["Insert", "Extract Max/Min", "Peek", "Heapify"],
     "Graph": ["Add Vertex", "Add Edge", "BFS", "DFS"],
 }

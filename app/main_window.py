@@ -25,6 +25,8 @@ from app.core.constants import (
     QUEUE_OPERATION_NAMES,
     LINKED_LIST_OPERATIONS,
     LINKED_LIST_OPERATION_NAMES,
+    BST_OPERATIONS,
+    BST_OPERATION_NAMES,
     DATA_STRUCTURE_OPERATIONS,
 )
 from app.ui.sidebar import Sidebar
@@ -36,10 +38,12 @@ from data_structures.linked_list import (
     SinglyLinkedList, LinkedListError, LinkedListEmptyError,
     LinkedListIndexError, LinkedListValueError,
 )
+from data_structures.bst import BinarySearchTree, BSTError, BSTEmptyError, BSTValueError
 from visualization.array_visualizer import ArrayVisualizer
 from visualization.stack_visualizer import StackVisualizer
 from visualization.queue_visualizer import QueueVisualizer
 from visualization.linked_list_visualizer import LinkedListVisualizer
+from visualization.bst_visualizer import BSTVisualizer
 
 
 class MainWindow(QMainWindow):
@@ -54,6 +58,8 @@ class MainWindow(QMainWindow):
         self._queue_visualizer = None
         self._linked_list = None
         self._linked_list_visualizer = None
+        self._bst = None
+        self._bst_visualizer = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -169,6 +175,8 @@ class MainWindow(QMainWindow):
             self._setup_queue()
         elif name == "Linked List":
             self._setup_linked_list()
+        elif name == "Binary Search Tree":
+            self._setup_bst()
         else:
             self._visualization_panel.set_data_structure(name)
             self._status_bar.showMessage(f"Selected: {name}")
@@ -219,6 +227,16 @@ class MainWindow(QMainWindow):
         self._operation_combo.clear()
         self._operation_combo.addItems(LINKED_LIST_OPERATION_NAMES)
         self._on_operation_changed(LINKED_LIST_OPERATION_NAMES[0])
+
+    def _setup_bst(self):
+        self._bst = BinarySearchTree()
+        self._create_bst_visualizer()
+        self._status_bar.showMessage("Selected: Binary Search Tree")
+        self._enable_controls()
+
+        self._operation_combo.clear()
+        self._operation_combo.addItems(BST_OPERATION_NAMES)
+        self._on_operation_changed(BST_OPERATION_NAMES[0])
 
     def _create_array_visualizer(self):
         center_widget = self._visualization_panel.parent()
@@ -280,6 +298,21 @@ class MainWindow(QMainWindow):
         if center_widget and center_layout:
             center_layout.insertWidget(0, self._linked_list_visualizer, 1)
 
+    def _create_bst_visualizer(self):
+        center_widget = self._visualization_panel.parent()
+        if center_widget:
+            center_layout = center_widget.layout()
+            if center_layout:
+                self._remove_current_visualizer(center_layout)
+                center_layout.removeWidget(self._visualization_panel)
+                self._visualization_panel.hide()
+
+        self._bst_visualizer = BSTVisualizer()
+        self._bst_visualizer.set_tree(self._bst.root)
+
+        if center_widget and center_layout:
+            center_layout.insertWidget(0, self._bst_visualizer, 1)
+
     def _remove_current_visualizer(self, center_layout):
         """Remove any currently displayed visualizer from the layout."""
         if self._array_visualizer:
@@ -298,6 +331,10 @@ class MainWindow(QMainWindow):
             center_layout.removeWidget(self._linked_list_visualizer)
             self._linked_list_visualizer.deleteLater()
             self._linked_list_visualizer = None
+        if self._bst_visualizer:
+            center_layout.removeWidget(self._bst_visualizer)
+            self._bst_visualizer.deleteLater()
+            self._bst_visualizer = None
 
     def _enable_controls(self):
         self._operation_combo.setEnabled(True)
@@ -317,6 +354,8 @@ class MainWindow(QMainWindow):
             op_info = QUEUE_OPERATIONS.get(operation)
         elif self._current_data_structure == "Linked List":
             op_info = LINKED_LIST_OPERATIONS.get(operation)
+        elif self._current_data_structure == "Binary Search Tree":
+            op_info = BST_OPERATIONS.get(operation)
         else:
             return
 
@@ -356,6 +395,8 @@ class MainWindow(QMainWindow):
             self._execute_queue_operation(operation, value_text)
         elif self._current_data_structure == "Linked List":
             self._execute_linked_list_operation(operation, value_text)
+        elif self._current_data_structure == "Binary Search Tree":
+            self._execute_bst_operation(operation, value_text)
 
     def _execute_array_operation(self, operation: str, value_text: str):
         try:
@@ -933,6 +974,188 @@ class MainWindow(QMainWindow):
         op_info = LINKED_LIST_OPERATIONS["Clear"]
         self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
 
+    # ============================================================
+    # BST OPERATIONS
+    # ============================================================
+
+    def _execute_bst_operation(self, operation: str, value_text: str):
+        try:
+            if operation == "Insert":
+                self._execute_bst_insert(value_text)
+            elif operation == "Delete":
+                self._execute_bst_delete(value_text)
+            elif operation == "Search":
+                self._execute_bst_search(value_text)
+            elif operation == "Inorder Traversal":
+                self._execute_bst_inorder()
+            elif operation == "Preorder Traversal":
+                self._execute_bst_preorder()
+            elif operation == "Postorder Traversal":
+                self._execute_bst_postorder()
+            elif operation == "Level Order Traversal":
+                self._execute_bst_level_order()
+            elif operation == "Find Minimum":
+                self._execute_bst_find_min()
+            elif operation == "Find Maximum":
+                self._execute_bst_find_max()
+            elif operation == "Height":
+                self._execute_bst_height()
+            elif operation == "Size":
+                self._execute_bst_size()
+            elif operation == "Is Empty":
+                self._execute_bst_is_empty()
+            elif operation == "Clear":
+                self._execute_bst_clear()
+        except BSTError as e:
+            self._show_error(self._format_bst_error(e, operation))
+            self._status_bar.showMessage(f"Error: {e}")
+
+    def _format_bst_error(self, error: BSTError, operation: str) -> str:
+        if isinstance(error, BSTEmptyError):
+            empty_messages = {
+                "Delete": "Cannot delete from an empty BST.",
+                "Search": "Cannot search an empty BST.",
+                "Find Minimum": "Cannot find minimum: BST is empty.",
+                "Find Maximum": "Cannot find maximum: BST is empty.",
+            }
+            return empty_messages.get(operation, str(error))
+        if isinstance(error, BSTValueError):
+            error_str = str(error)
+            if "already exists" in error_str:
+                return error_str
+            if "not found" in error_str:
+                return error_str
+            return error_str
+        return str(error)
+
+    def _parse_bst_value(self, text: str) -> int:
+        try:
+            return int(text.strip())
+        except ValueError:
+            raise BSTValueError("Value must be an integer")
+
+    def _execute_bst_insert(self, value_text: str):
+        if not value_text:
+            raise BSTValueError("Value required for Insert")
+        value = self._parse_bst_value(value_text)
+        self._bst.insert(value)
+        self._bst_visualizer.set_tree(self._bst.root, new_value=value)
+        self._bst_visualizer.set_feedback(f"Inserted {value} into BST.")
+        op_info = BST_OPERATIONS["Insert"]
+        self._update_status("Insert", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_delete(self, value_text: str):
+        if not value_text:
+            raise BSTValueError("Value required for Delete")
+        value = self._parse_bst_value(value_text)
+        self._bst.delete(value)
+        self._bst_visualizer.set_tree(self._bst.root)
+        self._bst_visualizer.set_feedback(f"Deleted {value} from BST.")
+        op_info = BST_OPERATIONS["Delete"]
+        self._update_status("Delete", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_search(self, value_text: str):
+        if not value_text:
+            raise BSTValueError("Value required for Search")
+        value = self._parse_bst_value(value_text)
+        path = self._bst.search_path(value)
+        found = self._bst.search(value) is not None
+        self._bst_visualizer.set_tree(self._bst.root, highlight_path=path)
+        if found:
+            self._bst_visualizer.set_feedback(f"Value {value} found in BST.")
+        else:
+            self._bst_visualizer.set_feedback(f"Value {value} not found in BST.")
+        op_info = BST_OPERATIONS["Search"]
+        self._update_status("Search", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_inorder(self):
+        result = self._bst.inorder()
+        if not result:
+            self._bst_visualizer.set_feedback("BST is empty.")
+        else:
+            traversal_str = " → ".join(str(x) for x in result)
+            self._bst_visualizer.set_feedback(f"Inorder: {traversal_str}")
+        self._bst_visualizer.set_tree(self._bst.root)
+        op_info = BST_OPERATIONS["Inorder Traversal"]
+        self._update_status("Inorder Traversal", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_preorder(self):
+        result = self._bst.preorder()
+        if not result:
+            self._bst_visualizer.set_feedback("BST is empty.")
+        else:
+            traversal_str = " → ".join(str(x) for x in result)
+            self._bst_visualizer.set_feedback(f"Preorder: {traversal_str}")
+        self._bst_visualizer.set_tree(self._bst.root)
+        op_info = BST_OPERATIONS["Preorder Traversal"]
+        self._update_status("Preorder Traversal", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_postorder(self):
+        result = self._bst.postorder()
+        if not result:
+            self._bst_visualizer.set_feedback("BST is empty.")
+        else:
+            traversal_str = " → ".join(str(x) for x in result)
+            self._bst_visualizer.set_feedback(f"Postorder: {traversal_str}")
+        self._bst_visualizer.set_tree(self._bst.root)
+        op_info = BST_OPERATIONS["Postorder Traversal"]
+        self._update_status("Postorder Traversal", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_level_order(self):
+        result = self._bst.level_order()
+        if not result:
+            self._bst_visualizer.set_feedback("BST is empty.")
+        else:
+            traversal_str = " → ".join(str(x) for x in result)
+            self._bst_visualizer.set_feedback(f"Level Order: {traversal_str}")
+        self._bst_visualizer.set_tree(self._bst.root)
+        op_info = BST_OPERATIONS["Level Order Traversal"]
+        self._update_status("Level Order Traversal", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_find_min(self):
+        value = self._bst.find_min()
+        self._bst_visualizer.set_tree(self._bst.root)
+        self._bst_visualizer.set_feedback(f"Minimum value: {value}")
+        op_info = BST_OPERATIONS["Find Minimum"]
+        self._update_status("Find Minimum", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_find_max(self):
+        value = self._bst.find_max()
+        self._bst_visualizer.set_tree(self._bst.root)
+        self._bst_visualizer.set_feedback(f"Maximum value: {value}")
+        op_info = BST_OPERATIONS["Find Maximum"]
+        self._update_status("Find Maximum", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_height(self):
+        h = self._bst.height()
+        self._bst_visualizer.set_tree(self._bst.root)
+        self._bst_visualizer.set_feedback(f"Height of BST: {h}")
+        op_info = BST_OPERATIONS["Height"]
+        self._update_status("Height", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_size(self):
+        sz = self._bst.size()
+        self._bst_visualizer.set_tree(self._bst.root)
+        self._bst_visualizer.set_feedback(f"Size of BST: {sz}")
+        op_info = BST_OPERATIONS["Size"]
+        self._update_status("Size", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_is_empty(self):
+        empty = self._bst.is_empty()
+        msg = "BST is empty." if empty else "BST is not empty."
+        self._bst_visualizer.set_tree(self._bst.root)
+        self._bst_visualizer.set_feedback(msg)
+        op_info = BST_OPERATIONS["Is Empty"]
+        self._update_status("Is Empty", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_bst_clear(self):
+        self._bst.clear()
+        self._bst_visualizer.set_tree(None)
+        self._bst_visualizer.clear_highlights()
+        self._bst_visualizer.set_feedback("BST cleared.")
+        op_info = BST_OPERATIONS["Clear"]
+        self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
+
     def _update_status(self, operation: str, time_complexity: str, space_complexity: str):
         self._status_bar.showMessage(
             f"Operation: {operation} | Time: {time_complexity} | Space: {space_complexity}"
@@ -978,6 +1201,15 @@ class MainWindow(QMainWindow):
                     self._linked_list_visualizer.deleteLater()
                     self._linked_list_visualizer = None
 
+        if self._bst_visualizer:
+            center_widget = self._visualization_panel.parent()
+            if center_widget:
+                center_layout = center_widget.layout()
+                if center_layout:
+                    center_layout.removeWidget(self._bst_visualizer)
+                    self._bst_visualizer.deleteLater()
+                    self._bst_visualizer = None
+
         self._visualization_panel.show()
         center_widget = self._visualization_panel.parent()
         if center_widget:
@@ -989,6 +1221,7 @@ class MainWindow(QMainWindow):
         self._stack = None
         self._queue = None
         self._linked_list = None
+        self._bst = None
         self._current_data_structure = None
         self._visualization_panel.reset()
         self._operation_combo.clear()

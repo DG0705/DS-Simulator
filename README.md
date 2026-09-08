@@ -74,7 +74,6 @@ The goal of this project is to create an interactive educational tool that helps
 - [x] Unit tests (`tests/test_linked_list.py`)
 
 **Upcoming Phases:**
-- [ ] Phase 6: Binary Search Tree visualization
 - [ ] Phase 7: Heap visualization
 - [ ] Phase 8: Graph visualization
 - [ ] Phase 9: Sorting algorithms
@@ -119,8 +118,11 @@ python -m pytest tests/test_queue.py -v
 # Run Linked List tests specifically
 python -m pytest tests/test_linked_list.py -v
 
+# Run BST tests specifically
+python -m pytest tests/test_bst.py -v
+
 # Run with unittest
-python -m unittest tests.test_array tests.test_stack tests.test_queue tests.test_linked_list -v
+python -m unittest tests.test_array tests.test_stack tests.test_queue tests.test_linked_list tests.test_bst -v
 ```
 
 ## Array Visualization
@@ -313,6 +315,63 @@ Each node contains:
 | Is Empty | O(1) | O(1) |
 | Clear | O(n) | O(1) auxiliary |
 
+## Binary Search Tree Visualization
+
+The Binary Search Tree module is the fifth fully functional data structure in the application.
+
+### Properties
+
+- **No duplicates**: Inserting a duplicate value raises BSTValueError
+- **Height convention**: Empty tree = 0, single node = 1
+- **Delete handles 3 cases**: Leaf, one child, two children (inorder successor)
+
+### Supported Operations
+
+| Operation | Description | Input Format |
+|-----------|-------------|--------------|
+| **Insert** | Add value to BST | `50` (value only) |
+| **Delete** | Remove value from BST | `50` (value only) |
+| **Search** | Find value in BST | `50` (value only) |
+| **Inorder Traversal** | Visit nodes sorted (L→Root→R) | (no input required) |
+| **Preorder Traversal** | Visit nodes root-first (Root→L→R) | (no input required) |
+| **Postorder Traversal** | Visit nodes children-first (L→R→Root) | (no input required) |
+| **Level Order Traversal** | Visit nodes level by level (BFS) | (no input required) |
+| **Find Minimum** | Find minimum value | (no input required) |
+| **Find Maximum** | Find maximum value | (no input required) |
+| **Height** | Return tree height | (no input required) |
+| **Size** | Return node count | (no input required) |
+| **Is Empty** | Check if BST is empty | (no input required) |
+| **Clear** | Remove all nodes | (no input required) |
+
+### Visual Features
+
+- Hierarchical tree layout with nodes drawn as circles
+- Edges connecting parent to child nodes
+- ROOT label above the root node
+- Blue highlight for nodes in search path
+- Green highlight for newly inserted nodes
+- Traversal results displayed in feedback panel
+- Horizontal and vertical scrolling for large trees
+- Operation feedback displayed below visualization
+
+### Time & Space Complexity
+
+| Operation | Time Complexity | Space Complexity |
+|-----------|-----------------|------------------|
+| Insert | O(log n) avg, O(n) worst | O(log n) stack |
+| Delete | O(log n) avg, O(n) worst | O(log n) stack |
+| Search | O(log n) avg, O(n) worst | O(log n) stack |
+| Inorder | O(n) | O(h) stack |
+| Preorder | O(n) | O(h) stack |
+| Postorder | O(n) | O(h) stack |
+| Level Order | O(n) | O(w) queue |
+| Find Minimum | O(log n) avg, O(n) worst | O(1) |
+| Find Maximum | O(log n) avg, O(n) worst | O(1) |
+| Height | O(n) | O(h) stack |
+| Size | O(1) | O(1) |
+| Is Empty | O(1) | O(1) |
+| Clear | O(1) | O(1) |
+
 ## Project Structure
 
 ```
@@ -335,7 +394,8 @@ DataStructureVisualizer/
 │   ├── array.py           # Array implementation
 │   ├── stack.py           # Stack implementation
 │   ├── queue.py           # Queue implementation (collections.deque)
-│   └── linked_list.py     # Singly Linked List implementation
+│   ├── linked_list.py     # Singly Linked List implementation
+│   └── bst.py             # Binary Search Tree implementation
 ├── algorithms/            # Algorithm implementations (future)
 │   └── __init__.py
 ├── visualization/         # Visualization utilities
@@ -343,13 +403,15 @@ DataStructureVisualizer/
 │   ├── array_visualizer.py     # Array visualization widget
 │   ├── stack_visualizer.py     # Stack visualization widget
 │   ├── queue_visualizer.py     # Queue visualization widget
-│   └── linked_list_visualizer.py  # Linked List visualization widget
+│   ├── linked_list_visualizer.py  # Linked List visualization widget
+│   └── bst_visualizer.py       # BST visualization widget
 └── tests/                 # Unit tests
     ├── __init__.py
     ├── test_array.py      # Array unit tests
     ├── test_stack.py      # Stack unit tests
     ├── test_queue.py      # Queue unit tests
-    └── test_linked_list.py  # Linked List unit tests
+    ├── test_linked_list.py  # Linked List unit tests
+    └── test_bst.py        # BST unit tests
 ```
 
 ## Architecture Overview
@@ -363,14 +425,17 @@ DataStructureVisualizer/
 - **data_structures/stack.py**: Pure Python Stack implementation (no GUI dependencies)
 - **data_structures/queue.py**: Pure Python Queue implementation using collections.deque (no GUI dependencies)
 - **data_structures/linked_list.py**: Pure Python Singly Linked List implementation (no GUI dependencies)
+- **data_structures/bst.py**: Pure Python Binary Search Tree implementation (no GUI dependencies)
 - **visualization/array_visualizer.py**: PyQt6 widget for Array visualization
 - **visualization/stack_visualizer.py**: PyQt6 widget for Stack visualization
 - **visualization/queue_visualizer.py**: PyQt6 widget for Queue visualization
 - **visualization/linked_list_visualizer.py**: PyQt6 widget for Linked List visualization
+- **visualization/bst_visualizer.py**: PyQt6 widget for BST visualization
 - **tests/test_array.py**: Unit tests for Array data structure
 - **tests/test_stack.py**: Unit tests for Stack data structure
 - **tests/test_queue.py**: Unit tests for Queue data structure
 - **tests/test_linked_list.py**: Unit tests for Linked List data structure
+- **tests/test_bst.py**: Unit tests for BST data structure
 
 The codebase follows separation of concerns - UI code is separate from data structure logic, making it easy to extend.
 
