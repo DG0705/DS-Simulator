@@ -763,12 +763,81 @@ BST_OPERATIONS = {
 
 BST_OPERATION_NAMES = list(BST_OPERATIONS.keys())
 
+HEAP_OPERATIONS = {
+    "Insert": {
+        "input_type": "value",
+        "input_label": "Value",
+        "placeholder": "Enter value (e.g. 50)",
+        "description": "Insert a value into the Max Heap.",
+        "time_complexity": "O(log n)",
+        "space_complexity": "O(1) auxiliary",
+    },
+    "Extract Max": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Remove and return the maximum value from the heap.",
+        "time_complexity": "O(log n)",
+        "space_complexity": "O(1) auxiliary",
+    },
+    "Peek": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Return the maximum value without removing it.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Build Heap": {
+        "input_type": "values",
+        "input_label": "Values",
+        "placeholder": "Enter values separated by commas (e.g. 50,30,70,20)",
+        "description": "Build a max heap from a list of values using bottom-up construction.",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(n)",
+    },
+    "Traverse": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Display the internal heap array (level-order representation).",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(1) auxiliary",
+    },
+    "Size": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Return the number of elements in the heap.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Is Empty": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Check if the heap is empty.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Clear": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Remove all elements from the heap.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+}
+
+HEAP_OPERATION_NAMES = list(HEAP_OPERATIONS.keys())
+
 DATA_STRUCTURE_OPERATIONS = {
     "Array": ARRAY_OPERATION_NAMES,
     "Stack": STACK_OPERATION_NAMES,
     "Queue": QUEUE_OPERATION_NAMES,
     "Linked List": LINKED_LIST_OPERATION_NAMES,
     "Binary Search Tree": BST_OPERATION_NAMES,
-    "Heap": ["Insert", "Extract Max/Min", "Peek", "Heapify"],
+    "Heap": HEAP_OPERATION_NAMES,
     "Graph": ["Add Vertex", "Add Edge", "BFS", "DFS"],
 }

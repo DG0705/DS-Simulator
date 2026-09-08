@@ -74,7 +74,6 @@ The goal of this project is to create an interactive educational tool that helps
 - [x] Unit tests (`tests/test_linked_list.py`)
 
 **Upcoming Phases:**
-- [ ] Phase 7: Heap visualization
 - [ ] Phase 8: Graph visualization
 - [ ] Phase 9: Sorting algorithms
 - [ ] Phase 10: Searching algorithms
@@ -372,6 +371,61 @@ The Binary Search Tree module is the fifth fully functional data structure in th
 | Is Empty | O(1) | O(1) |
 | Clear | O(1) | O(1) |
 
+## Max Heap Visualization
+
+The Heap module is the sixth fully functional data structure in the application.
+
+### Properties
+
+- **Max Heap**: Every parent node is greater than or equal to its children
+- **Array representation**: Heap stored as a complete binary tree in an array
+- **Zero-based indexing**: parent(i) = (i-1)//2, left(i) = 2*i+1, right(i) = 2*i+2
+
+### Supported Operations
+
+| Operation | Description | Input Format |
+|-----------|-------------|--------------|
+| **Insert** | Add value to heap | `50` (value only) |
+| **Extract Max** | Remove and return maximum | (no input required) |
+| **Peek** | View maximum without removing | (no input required) |
+| **Build Heap** | Build heap from value list | `50,30,70,20` (comma-separated) |
+| **Traverse** | Display heap array | (no input required) |
+| **Size** | Return element count | (no input required) |
+| **Is Empty** | Check if heap is empty | (no input required) |
+| **Clear** | Remove all elements | (no input required) |
+
+### Visual Features
+
+- Hierarchical tree layout with nodes drawn as circles
+- Edges connecting parent to child nodes
+- ROOT label above the root node
+- Heap array representation displayed below tree
+- Heap property indicator message
+- Green highlight for newly inserted nodes
+- Blue highlight for peek operation
+- Horizontal and vertical scrolling for large heaps
+- Operation feedback displayed below visualization
+
+### Build Heap
+
+Uses bottom-up heap construction for O(n) complexity:
+- Start from last non-leaf node
+- Apply heapify_down to each node
+- More efficient than inserting elements one by one
+
+### Time & Space Complexity
+
+| Operation | Time Complexity | Space Complexity |
+|-----------|-----------------|------------------|
+| Insert | O(log n) | O(1) auxiliary |
+| Extract Max | O(log n) | O(1) auxiliary |
+| Peek | O(1) | O(1) |
+| Build Heap | O(n) | O(n) |
+| Traverse | O(n) | O(1) auxiliary |
+| Size | O(1) | O(1) |
+| Is Empty | O(1) | O(1) |
+| Clear | O(1) | O(1) |
+
 ## Project Structure
 
 ```
@@ -395,7 +449,8 @@ DataStructureVisualizer/
 │   ├── stack.py           # Stack implementation
 │   ├── queue.py           # Queue implementation (collections.deque)
 │   ├── linked_list.py     # Singly Linked List implementation
-│   └── bst.py             # Binary Search Tree implementation
+│   ├── bst.py             # Binary Search Tree implementation
+│   └── heap.py            # Max Heap implementation
 ├── algorithms/            # Algorithm implementations (future)
 │   └── __init__.py
 ├── visualization/         # Visualization utilities
@@ -404,14 +459,16 @@ DataStructureVisualizer/
 │   ├── stack_visualizer.py     # Stack visualization widget
 │   ├── queue_visualizer.py     # Queue visualization widget
 │   ├── linked_list_visualizer.py  # Linked List visualization widget
-│   └── bst_visualizer.py       # BST visualization widget
+│   ├── bst_visualizer.py       # BST visualization widget
+│   └── heap_visualizer.py      # Heap visualization widget
 └── tests/                 # Unit tests
     ├── __init__.py
     ├── test_array.py      # Array unit tests
     ├── test_stack.py      # Stack unit tests
     ├── test_queue.py      # Queue unit tests
     ├── test_linked_list.py  # Linked List unit tests
-    └── test_bst.py        # BST unit tests
+    ├── test_bst.py        # BST unit tests
+    └── test_heap.py       # Heap unit tests
 ```
 
 ## Architecture Overview
@@ -426,16 +483,19 @@ DataStructureVisualizer/
 - **data_structures/queue.py**: Pure Python Queue implementation using collections.deque (no GUI dependencies)
 - **data_structures/linked_list.py**: Pure Python Singly Linked List implementation (no GUI dependencies)
 - **data_structures/bst.py**: Pure Python Binary Search Tree implementation (no GUI dependencies)
+- **data_structures/heap.py**: Pure Python Max Heap implementation (no GUI dependencies)
 - **visualization/array_visualizer.py**: PyQt6 widget for Array visualization
 - **visualization/stack_visualizer.py**: PyQt6 widget for Stack visualization
 - **visualization/queue_visualizer.py**: PyQt6 widget for Queue visualization
 - **visualization/linked_list_visualizer.py**: PyQt6 widget for Linked List visualization
 - **visualization/bst_visualizer.py**: PyQt6 widget for BST visualization
+- **visualization/heap_visualizer.py**: PyQt6 widget for Heap visualization
 - **tests/test_array.py**: Unit tests for Array data structure
 - **tests/test_stack.py**: Unit tests for Stack data structure
 - **tests/test_queue.py**: Unit tests for Queue data structure
 - **tests/test_linked_list.py**: Unit tests for Linked List data structure
 - **tests/test_bst.py**: Unit tests for BST data structure
+- **tests/test_heap.py**: Unit tests for Heap data structure
 
 The codebase follows separation of concerns - UI code is separate from data structure logic, making it easy to extend.
 

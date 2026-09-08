@@ -27,6 +27,8 @@ from app.core.constants import (
     LINKED_LIST_OPERATION_NAMES,
     BST_OPERATIONS,
     BST_OPERATION_NAMES,
+    HEAP_OPERATIONS,
+    HEAP_OPERATION_NAMES,
     DATA_STRUCTURE_OPERATIONS,
 )
 from app.ui.sidebar import Sidebar
@@ -39,11 +41,13 @@ from data_structures.linked_list import (
     LinkedListIndexError, LinkedListValueError,
 )
 from data_structures.bst import BinarySearchTree, BSTError, BSTEmptyError, BSTValueError
+from data_structures.heap import MaxHeap, HeapError, HeapEmptyError, HeapValueError
 from visualization.array_visualizer import ArrayVisualizer
 from visualization.stack_visualizer import StackVisualizer
 from visualization.queue_visualizer import QueueVisualizer
 from visualization.linked_list_visualizer import LinkedListVisualizer
 from visualization.bst_visualizer import BSTVisualizer
+from visualization.heap_visualizer import HeapVisualizer
 
 
 class MainWindow(QMainWindow):
@@ -60,6 +64,8 @@ class MainWindow(QMainWindow):
         self._linked_list_visualizer = None
         self._bst = None
         self._bst_visualizer = None
+        self._heap = None
+        self._heap_visualizer = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -177,6 +183,8 @@ class MainWindow(QMainWindow):
             self._setup_linked_list()
         elif name == "Binary Search Tree":
             self._setup_bst()
+        elif name == "Heap":
+            self._setup_heap()
         else:
             self._visualization_panel.set_data_structure(name)
             self._status_bar.showMessage(f"Selected: {name}")
@@ -237,6 +245,16 @@ class MainWindow(QMainWindow):
         self._operation_combo.clear()
         self._operation_combo.addItems(BST_OPERATION_NAMES)
         self._on_operation_changed(BST_OPERATION_NAMES[0])
+
+    def _setup_heap(self):
+        self._heap = MaxHeap()
+        self._create_heap_visualizer()
+        self._status_bar.showMessage("Selected: Heap")
+        self._enable_controls()
+
+        self._operation_combo.clear()
+        self._operation_combo.addItems(HEAP_OPERATION_NAMES)
+        self._on_operation_changed(HEAP_OPERATION_NAMES[0])
 
     def _create_array_visualizer(self):
         center_widget = self._visualization_panel.parent()
@@ -313,6 +331,21 @@ class MainWindow(QMainWindow):
         if center_widget and center_layout:
             center_layout.insertWidget(0, self._bst_visualizer, 1)
 
+    def _create_heap_visualizer(self):
+        center_widget = self._visualization_panel.parent()
+        if center_widget:
+            center_layout = center_widget.layout()
+            if center_layout:
+                self._remove_current_visualizer(center_layout)
+                center_layout.removeWidget(self._visualization_panel)
+                self._visualization_panel.hide()
+
+        self._heap_visualizer = HeapVisualizer()
+        self._heap_visualizer.set_heap(self._heap.traverse())
+
+        if center_widget and center_layout:
+            center_layout.insertWidget(0, self._heap_visualizer, 1)
+
     def _remove_current_visualizer(self, center_layout):
         """Remove any currently displayed visualizer from the layout."""
         if self._array_visualizer:
@@ -335,6 +368,10 @@ class MainWindow(QMainWindow):
             center_layout.removeWidget(self._bst_visualizer)
             self._bst_visualizer.deleteLater()
             self._bst_visualizer = None
+        if self._heap_visualizer:
+            center_layout.removeWidget(self._heap_visualizer)
+            self._heap_visualizer.deleteLater()
+            self._heap_visualizer = None
 
     def _enable_controls(self):
         self._operation_combo.setEnabled(True)
@@ -356,6 +393,8 @@ class MainWindow(QMainWindow):
             op_info = LINKED_LIST_OPERATIONS.get(operation)
         elif self._current_data_structure == "Binary Search Tree":
             op_info = BST_OPERATIONS.get(operation)
+        elif self._current_data_structure == "Heap":
+            op_info = HEAP_OPERATIONS.get(operation)
         else:
             return
 
@@ -397,6 +436,8 @@ class MainWindow(QMainWindow):
             self._execute_linked_list_operation(operation, value_text)
         elif self._current_data_structure == "Binary Search Tree":
             self._execute_bst_operation(operation, value_text)
+        elif self._current_data_structure == "Heap":
+            self._execute_heap_operation(operation, value_text)
 
     def _execute_array_operation(self, operation: str, value_text: str):
         try:
@@ -1156,6 +1197,129 @@ class MainWindow(QMainWindow):
         op_info = BST_OPERATIONS["Clear"]
         self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
 
+    # ============================================================
+    # HEAP OPERATIONS
+    # ============================================================
+
+    def _execute_heap_operation(self, operation: str, value_text: str):
+        try:
+            if operation == "Insert":
+                self._execute_heap_insert(value_text)
+            elif operation == "Extract Max":
+                self._execute_heap_extract_max()
+            elif operation == "Peek":
+                self._execute_heap_peek()
+            elif operation == "Build Heap":
+                self._execute_heap_build(value_text)
+            elif operation == "Traverse":
+                self._execute_heap_traverse()
+            elif operation == "Size":
+                self._execute_heap_size()
+            elif operation == "Is Empty":
+                self._execute_heap_is_empty()
+            elif operation == "Clear":
+                self._execute_heap_clear()
+        except HeapError as e:
+            self._show_error(self._format_heap_error(e, operation))
+            self._status_bar.showMessage(f"Error: {e}")
+
+    def _format_heap_error(self, error: HeapError, operation: str) -> str:
+        if isinstance(error, HeapEmptyError):
+            empty_messages = {
+                "Extract Max": "Cannot extract maximum: the heap is empty.",
+                "Peek": "Cannot peek: the heap is empty.",
+            }
+            return empty_messages.get(operation, str(error))
+        if isinstance(error, HeapValueError):
+            return str(error)
+        return str(error)
+
+    def _parse_heap_value(self, text: str) -> int:
+        try:
+            return int(text.strip())
+        except ValueError:
+            raise HeapValueError("Value must be an integer")
+
+    def _parse_heap_values(self, text: str) -> list:
+        parts = [p.strip() for p in text.split(",")]
+        if not parts or all(p == "" for p in parts):
+            raise HeapValueError("Values required for Build Heap")
+        values = []
+        for p in parts:
+            if p == "":
+                raise HeapValueError("Invalid values. Enter comma-separated integers.")
+            try:
+                values.append(int(p))
+            except ValueError:
+                raise HeapValueError("Invalid values. Enter comma-separated integers.")
+        return values
+
+    def _execute_heap_insert(self, value_text: str):
+        if not value_text:
+            raise HeapValueError("Value required for Insert")
+        value = self._parse_heap_value(value_text)
+        self._heap.insert(value)
+        self._heap_visualizer.set_heap(self._heap.traverse(), new_index=0)
+        self._heap_visualizer.set_feedback(f"Inserted {value} into heap.")
+        op_info = HEAP_OPERATIONS["Insert"]
+        self._update_status("Insert", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_heap_extract_max(self):
+        value = self._heap.extract_max()
+        self._heap_visualizer.set_heap(self._heap.traverse())
+        self._heap_visualizer.set_feedback(f"Extracted maximum value {value}.")
+        op_info = HEAP_OPERATIONS["Extract Max"]
+        self._update_status("Extract Max", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_heap_peek(self):
+        value = self._heap.peek()
+        self._heap_visualizer.set_heap(self._heap.traverse(), highlight_indices=[0])
+        self._heap_visualizer.set_feedback(f"Maximum element: {value}.")
+        op_info = HEAP_OPERATIONS["Peek"]
+        self._update_status("Peek", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_heap_build(self, value_text: str):
+        values = self._parse_heap_values(value_text)
+        self._heap.build_heap(values)
+        self._heap_visualizer.set_heap(self._heap.traverse())
+        self._heap_visualizer.set_feedback(f"Built max heap from {len(values)} values.")
+        op_info = HEAP_OPERATIONS["Build Heap"]
+        self._update_status("Build Heap", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_heap_traverse(self):
+        result = self._heap.traverse()
+        if not result:
+            self._heap_visualizer.set_feedback("Heap is empty.")
+        else:
+            traversal_str = " → ".join(str(x) for x in result)
+            self._heap_visualizer.set_feedback(f"Level-order: {traversal_str}")
+        self._heap_visualizer.set_heap(result)
+        op_info = HEAP_OPERATIONS["Traverse"]
+        self._update_status("Traverse", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_heap_size(self):
+        sz = self._heap.size()
+        self._heap_visualizer.set_heap(self._heap.traverse())
+        self._heap_visualizer.set_feedback(f"Heap size = {sz}.")
+        op_info = HEAP_OPERATIONS["Size"]
+        self._update_status("Size", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_heap_is_empty(self):
+        empty = self._heap.is_empty()
+        msg = "Heap is empty." if empty else "Heap is not empty."
+        self._heap_visualizer.set_heap(self._heap.traverse())
+        self._heap_visualizer.set_feedback(msg)
+        op_info = HEAP_OPERATIONS["Is Empty"]
+        self._update_status("Is Empty", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_heap_clear(self):
+        self._heap.clear()
+        self._heap_visualizer.set_heap([])
+        self._heap_visualizer.clear_highlights()
+        self._heap_visualizer.set_feedback("Heap cleared.")
+        op_info = HEAP_OPERATIONS["Clear"]
+        self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
+
     def _update_status(self, operation: str, time_complexity: str, space_complexity: str):
         self._status_bar.showMessage(
             f"Operation: {operation} | Time: {time_complexity} | Space: {space_complexity}"
@@ -1210,6 +1374,15 @@ class MainWindow(QMainWindow):
                     self._bst_visualizer.deleteLater()
                     self._bst_visualizer = None
 
+        if self._heap_visualizer:
+            center_widget = self._visualization_panel.parent()
+            if center_widget:
+                center_layout = center_widget.layout()
+                if center_layout:
+                    center_layout.removeWidget(self._heap_visualizer)
+                    self._heap_visualizer.deleteLater()
+                    self._heap_visualizer = None
+
         self._visualization_panel.show()
         center_widget = self._visualization_panel.parent()
         if center_widget:
@@ -1222,6 +1395,7 @@ class MainWindow(QMainWindow):
         self._queue = None
         self._linked_list = None
         self._bst = None
+        self._heap = None
         self._current_data_structure = None
         self._visualization_panel.reset()
         self._operation_combo.clear()

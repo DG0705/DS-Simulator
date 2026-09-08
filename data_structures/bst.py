@@ -1,3 +1,4 @@
+from collections import deque
 from typing import Any, List, Optional
 
 
@@ -188,13 +189,13 @@ class BinarySearchTree:
             result.append(node.value)
 
     def level_order(self) -> List[Any]:
-        """Return level-order (BFS) traversal."""
+        """Return level-order (BFS) traversal. O(n) time, O(w) space."""
         if self._root is None:
             return []
         result: List[Any] = []
-        queue = [self._root]
+        queue = deque([self._root])
         while queue:
-            node = queue.pop(0)
+            node = queue.popleft()
             result.append(node.value)
             if node.left:
                 queue.append(node.left)
@@ -241,13 +242,13 @@ class BinarySearchTree:
         return "BST({" + ", ".join(str(v) for v in vals) + "})" if vals else "BST({})"
 
     def get_all_nodes(self) -> List[TreeNode]:
-        """Return all nodes level-by-level for visualization."""
+        """Return all nodes level-by-level for visualization. O(n) time."""
         if self._root is None:
             return []
         result: List[TreeNode] = []
-        queue = [self._root]
+        queue = deque([self._root])
         while queue:
-            node = queue.pop(0)
+            node = queue.popleft()
             result.append(node)
             if node.left:
                 queue.append(node.left)
