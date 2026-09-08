@@ -5,6 +5,29 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QRect
 from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush, QFontMetrics
 
+from app.core.constants import (
+    BG_SURFACE,
+    BG_SECONDARY,
+    BG_TERTIARY,
+    TEXT_PRIMARY,
+    TEXT_SECONDARY,
+    TEXT_MUTED,
+    TEXT_DISABLED,
+    BORDER_LIGHT,
+    BORDER_MEDIUM,
+    ACCENT_PRIMARY,
+    ACCENT_PRIMARY_LIGHT,
+    ACCENT_SUCCESS,
+    ACCENT_SUCCESS_LIGHT,
+    ACCENT_ERROR,
+    ACCENT_ERROR_LIGHT,
+    ACCENT_WARNING,
+    ACCENT_WARNING_LIGHT,
+    SCROLLBAR_BG,
+    SCROLLBAR_HANDLE,
+    SCROLLBAR_HANDLE_HOVER
+)
+
 
 class ArrayVisualizer(QWidget):
     """Widget for visualizing an array as indexed cells."""
@@ -16,19 +39,19 @@ class ArrayVisualizer(QWidget):
     VERTICAL_MARGIN = 20
 
     COLORS = {
-        "background": QColor("#ffffff"),
-        "cell_bg": QColor("#f0f0f0"),
-        "cell_border": QColor("#b0b0b0"),
-        "cell_border_highlight": QColor("#0078d4"),
-        "cell_border_selected": QColor("#107c10"),
-        "cell_bg_highlight": QColor("#d6eaff"),
-        "cell_bg_selected": QColor("#d6f5d6"),
-        "cell_bg_new": QColor("#fff8e1"),
-        "cell_bg_deleted": QColor("#ffeaea"),
-        "index_text": QColor("#666666"),
-        "value_text": QColor("#1a1a1a"),
-        "value_text_highlight": QColor("#005a9e"),
-        "empty_text": QColor("#999999"),
+        "background": QColor(BG_SURFACE),
+        "cell_bg": QColor(BG_TERTIARY),
+        "cell_border": QColor(BORDER_MEDIUM),
+        "cell_border_highlight": QColor(ACCENT_PRIMARY),
+        "cell_border_selected": QColor(ACCENT_SUCCESS),
+        "cell_bg_highlight": QColor(ACCENT_PRIMARY_LIGHT),
+        "cell_bg_selected": QColor(ACCENT_SUCCESS_LIGHT),
+        "cell_bg_new": QColor(ACCENT_WARNING_LIGHT),
+        "cell_bg_deleted": QColor(ACCENT_ERROR_LIGHT),
+        "index_text": QColor(TEXT_MUTED),
+        "value_text": QColor(TEXT_PRIMARY),
+        "value_text_highlight": QColor(ACCENT_PRIMARY),
+        "empty_text": QColor(TEXT_DISABLED),
     }
 
     def __init__(self, parent=None):
@@ -54,36 +77,39 @@ class ArrayVisualizer(QWidget):
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll_area.setStyleSheet("""
-            QScrollArea {
+        scroll_area.setStyleSheet(f"""
+            QScrollArea {{
                 border: none;
                 background-color: transparent;
-            }
-            QScrollBar:horizontal {
-                background-color: #f0f0f0;
+            }}
+            QScrollBar:horizontal {{
+                background-color: {SCROLLBAR_BG};
                 height: 8px;
                 border: none;
-            }
-            QScrollBar::handle:horizontal {
-                background-color: #cccccc;
+            }}
+            QScrollBar::handle:horizontal {{
+                background-color: {SCROLLBAR_HANDLE};
                 border-radius: 4px;
                 min-width: 30px;
-            }
-            QScrollBar::handle:horizontal:hover {
-                background-color: #bbbbbb;
-            }
+            }}
+            QScrollBar::handle:horizontal:hover {{
+                background-color: {SCROLLBAR_HANDLE_HOVER};
+            }}
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+                width: 0;
+            }}
         """)
 
         self._canvas = _ArrayCanvas(self)
         self._canvas.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
-        self._canvas.setStyleSheet("background-color: #ffffff;")
+        self._canvas.setStyleSheet(f"background-color: {BG_SURFACE};")
         scroll_area.setWidget(self._canvas)
 
         layout.addWidget(scroll_area, 1)
 
         self._feedback_label = QLabel("")
         self._feedback_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._feedback_label.setStyleSheet("font-size: 14px; color: #666666; padding: 8px;")
+        self._feedback_label.setStyleSheet(f"font-size: 14px; color: {TEXT_MUTED}; padding: 8px;")
         self._feedback_label.setWordWrap(True)
         layout.addWidget(self._feedback_label)
 
@@ -163,7 +189,8 @@ class _ArrayCanvas(QWidget):
 
     def _draw_empty_state(self, painter: QPainter):
         rect = self.rect()
-        painter.setPen(QPen(self._visualizer.COLORS["empty_text"]))
+        # Use a slightly darker color for better readability
+        painter.setPen(QPen(QColor(TEXT_MUTED)))
         font = QFont("Segoe UI", 14)
         painter.setFont(font)
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "Array is empty\n\nUse Append or Insert to add elements")

@@ -10,7 +10,8 @@ from app.core.constants import (
     SIDEBAR_STYLE,
     DATA_STRUCTURES_SECTION_TITLE,
     SIDEBAR_WIDTH,
-    ENABLED_BUTTON_STYLE
+    ENABLED_BUTTON_STYLE,
+    SCROLLBAR_STYLE
 )
 
 
@@ -35,28 +36,7 @@ class Sidebar(QWidget):
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll_area.setStyleSheet("""
-            QScrollArea {
-                border: none;
-                background-color: transparent;
-            }
-            QScrollBar:vertical {
-                background-color: #f0f0f0;
-                width: 8px;
-                border: none;
-            }
-            QScrollBar::handle:vertical {
-                background-color: #cccccc;
-                border-radius: 4px;
-                min-height: 30px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background-color: #bbbbbb;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0;
-            }
-        """)
+        scroll_area.setStyleSheet(SCROLLBAR_STYLE)
 
         scroll_content = QWidget()
         scroll_content.setStyleSheet("background-color: transparent;")

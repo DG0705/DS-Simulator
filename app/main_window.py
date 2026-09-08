@@ -16,7 +16,10 @@ from app.core.constants import (
     VALUE_LABEL,
     EXECUTE_BUTTON_TEXT,
     RESET_BUTTON_TEXT,
-    NO_OPERATION_SELECTED
+    NO_OPERATION_SELECTED,
+    ARRAY_OPERATIONS,
+    ARRAY_OPERATION_NAMES,
+    DATA_STRUCTURE_OPERATIONS,
 )
 from app.ui.sidebar import Sidebar
 from app.ui.visualization_panel import VisualizationPanel
@@ -70,7 +73,7 @@ class MainWindow(QMainWindow):
     def _create_control_panel(self):
         panel = QWidget()
         panel.setStyleSheet(CONTROL_PANEL_STYLE)
-        panel.setFixedHeight(140)
+        panel.setFixedHeight(160)
         panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         layout = QHBoxLayout(panel)
@@ -88,8 +91,15 @@ class MainWindow(QMainWindow):
         self._operation_combo.currentTextChanged.connect(self._on_operation_changed)
         operation_layout.addWidget(self._operation_combo)
 
-        value_group = QGroupBox(VALUE_LABEL)
-        value_layout = QVBoxLayout(value_group)
+        self._operation_description = QLabel("")
+        self._operation_description.setStyleSheet("font-size: 11px; color: #6B7280; padding: 2px 4px;")
+        self._operation_description.setWordWrap(True)
+        self._operation_description.setMinimumHeight(24)
+        operation_layout.addWidget(self._operation_description)
+
+        self._value_group = QGroupBox(VALUE_LABEL)
+        self._value_group.setMinimumWidth(180)
+        value_layout = QVBoxLayout(self._value_group)
         value_layout.setContentsMargins(12, 20, 12, 12)
         value_layout.setSpacing(8)
 
@@ -121,7 +131,7 @@ class MainWindow(QMainWindow):
         button_layout.addStretch()
 
         layout.addWidget(operation_group, 2)
-        layout.addWidget(value_group, 1)
+        layout.addWidget(self._value_group, 1)
         layout.addWidget(button_group, 1)
         layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
 
@@ -139,6 +149,9 @@ class MainWindow(QMainWindow):
             operations = self._get_operations_for_structure(name)
             self._operation_combo.clear()
             self._operation_combo.addItems(operations)
+            self._value_group.setTitle(VALUE_LABEL)
+            self._value_input.setPlaceholderText("Enter value")
+            self._operation_description.setText("")
 
     def _setup_array(self):
         self._array = Array()
@@ -146,19 +159,9 @@ class MainWindow(QMainWindow):
         self._status_bar.showMessage("Selected: Array")
         self._enable_controls()
 
-        operations = [
-            "Append",
-            "Insert",
-            "Delete",
-            "Search",
-            "Update",
-            "Get",
-            "Traverse",
-            "Clear"
-        ]
         self._operation_combo.clear()
-        self._operation_combo.addItems(operations)
-        self._on_operation_changed(operations[0])
+        self._operation_combo.addItems(ARRAY_OPERATION_NAMES)
+        self._on_operation_changed(ARRAY_OPERATION_NAMES[0])
 
     def _create_array_visualizer(self):
         center_widget = self._visualization_panel.parent()
@@ -181,35 +184,30 @@ class MainWindow(QMainWindow):
         self._reset_button.setEnabled(True)
 
     def _on_operation_changed(self, operation: str):
-        placeholders = {
-            "Append": "Enter value (e.g., 50)",
-            "Insert": "Enter index,value (e.g., 2,50)",
-            "Delete": "Enter index (e.g., 2)",
-            "Search": "Enter value to search (e.g., 50)",
-            "Update": "Enter index,value (e.g., 2,50)",
-            "Get": "Enter index (e.g., 2)",
-            "Traverse": "No input required",
-            "Clear": "No input required",
-        }
-        placeholder = placeholders.get(operation, "Enter value")
-        self._value_input.setPlaceholderText(placeholder)
+        if not self._current_data_structure or self._current_data_structure != "Array":
+            return
 
-        if operation in ["Traverse", "Clear"]:
+        op_info = ARRAY_OPERATIONS.get(operation)
+        if not op_info:
+            return
+
+        input_type = op_info["input_type"]
+        input_label = op_info["input_label"]
+        placeholder = op_info["placeholder"]
+        description = op_info["description"]
+
+        self._value_group.setTitle(input_label)
+        self._value_input.setPlaceholderText(placeholder)
+        self._operation_description.setText(description)
+
+        if input_type == "none":
             self._value_input.setEnabled(False)
+            self._value_input.clear()
         else:
             self._value_input.setEnabled(True)
 
     def _get_operations_for_structure(self, name):
-        operations_map = {
-            "Array": ["Insert", "Delete", "Search", "Traverse"],
-            "Stack": ["Push", "Pop", "Peek", "Is Empty"],
-            "Queue": ["Enqueue", "Dequeue", "Front", "Is Empty"],
-            "Linked List": ["Insert at Head", "Insert at Tail", "Delete", "Search"],
-            "Binary Search Tree": ["Insert", "Delete", "Search", "Inorder Traversal"],
-            "Heap": ["Insert", "Extract Max/Min", "Peek", "Heapify"],
-            "Graph": ["Add Vertex", "Add Edge", "BFS", "DFS"]
-        }
-        return operations_map.get(name, ["No operations available"])
+        return DATA_STRUCTURE_OPERATIONS.get(name, ["No operations available"])
 
     def _on_execute(self):
         if not self._current_data_structure:
@@ -245,8 +243,39 @@ class MainWindow(QMainWindow):
             elif operation == "Clear":
                 self._execute_clear()
         except ArrayError as e:
-            self._show_error(str(e))
+            self._show_error(self._format_error_message(e, operation))
             self._status_bar.showMessage(f"Error: {e}")
+
+    def _format_error_message(self, error: ArrayError, operation: str) -> str:
+        """Convert technical error messages to user-friendly ones."""
+        error_str = str(error)
+
+        if isinstance(error, ArrayEmptyError):
+            empty_messages = {
+                "Delete": "Cannot delete: the array is empty.",
+                "Search": "Cannot search: the array is empty.",
+                "Get": "Cannot get an element: the array is empty.",
+                "Update": "Cannot update: the array is empty.",
+            }
+            return empty_messages.get(operation, error_str)
+
+        if isinstance(error, ArrayIndexError):
+            if "out of range" in error_str:
+                if self._array:
+                    max_index = self._array.size() - 1
+                    if max_index >= 0:
+                        return f"Invalid index. Valid indices are 0–{max_index}."
+                return "Invalid index. The array is empty."
+            return error_str
+
+        if isinstance(error, ArrayValueError):
+            if "Invalid format" in error_str:
+                return "Invalid format. Enter index,value (example: 2,50)."
+            if "must be integers" in error_str:
+                return "Invalid input. Please enter an integer."
+            return error_str
+
+        return error_str
 
     def _parse_index_value(self, text: str) -> tuple:
         parts = [p.strip() for p in text.split(",")]
@@ -279,7 +308,8 @@ class MainWindow(QMainWindow):
         self._array_visualizer.set_array(self._array.traverse())
         self._array_visualizer.mark_new(self._array.size() - 1)
         self._array_visualizer.set_feedback(f"Appended {value} to the array.")
-        self._update_status("Append", "O(1) amortized", "O(1) auxiliary")
+        op_info = ARRAY_OPERATIONS["Append"]
+        self._update_status("Append", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_insert(self, value_text: str):
         if not value_text:
@@ -289,7 +319,8 @@ class MainWindow(QMainWindow):
         self._array_visualizer.set_array(self._array.traverse())
         self._array_visualizer.mark_new(index)
         self._array_visualizer.set_feedback(f"Inserted {value} at index {index}.")
-        self._update_status("Insert", "O(n)", "O(1) auxiliary")
+        op_info = ARRAY_OPERATIONS["Insert"]
+        self._update_status("Insert", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_delete(self, value_text: str):
         if not value_text:
@@ -298,8 +329,9 @@ class MainWindow(QMainWindow):
         deleted_value = self._array.delete(index)
         self._array_visualizer.set_array(self._array.traverse())
         self._array_visualizer.mark_deleted(index, deleted_value)
-        self._array_visualizer.set_feedback(f"Deleted element {deleted_value} from index {index}.")
-        self._update_status("Delete", "O(n)", "O(1) auxiliary")
+        self._array_visualizer.set_feedback(f"Deleted value {deleted_value} from index {index}.")
+        op_info = ARRAY_OPERATIONS["Delete"]
+        self._update_status("Delete", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_search(self, value_text: str):
         if not value_text:
@@ -308,7 +340,8 @@ class MainWindow(QMainWindow):
         index = self._array.search(value)
         self._array_visualizer.highlight_index(index)
         self._array_visualizer.set_feedback(f"Value {value} found at index {index}.")
-        self._update_status("Search", "O(n)", "O(1) auxiliary")
+        op_info = ARRAY_OPERATIONS["Search"]
+        self._update_status("Search", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_update(self, value_text: str):
         if not value_text:
@@ -318,7 +351,8 @@ class MainWindow(QMainWindow):
         self._array_visualizer.set_array(self._array.traverse())
         self._array_visualizer.select_index(index)
         self._array_visualizer.set_feedback(f"Updated index {index} from {old_value} to {value}.")
-        self._update_status("Update", "O(1)", "O(1)")
+        op_info = ARRAY_OPERATIONS["Update"]
+        self._update_status("Update", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_get(self, value_text: str):
         if not value_text:
@@ -327,7 +361,8 @@ class MainWindow(QMainWindow):
         value = self._array.get(index)
         self._array_visualizer.highlight_index(index)
         self._array_visualizer.set_feedback(f"arr[{index}] = {value}.")
-        self._update_status("Get", "O(1)", "O(1)")
+        op_info = ARRAY_OPERATIONS["Get"]
+        self._update_status("Get", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_traverse(self):
         elements = self._array.traverse()
@@ -336,14 +371,16 @@ class MainWindow(QMainWindow):
         else:
             traversal_str = " → ".join(str(x) for x in elements)
             self._array_visualizer.set_feedback(f"Traversal: {traversal_str}")
-        self._update_status("Traverse", "O(n)", "O(1) auxiliary")
+        op_info = ARRAY_OPERATIONS["Traverse"]
+        self._update_status("Traverse", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_clear(self):
         self._array.clear()
         self._array_visualizer.set_array([])
         self._array_visualizer.clear_highlights()
         self._array_visualizer.set_feedback("Array cleared.")
-        self._update_status("Clear", "O(n)", "O(1) auxiliary")
+        op_info = ARRAY_OPERATIONS["Clear"]
+        self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
 
     def _update_status(self, operation: str, time_complexity: str, space_complexity: str):
         self._status_bar.showMessage(
@@ -378,3 +415,6 @@ class MainWindow(QMainWindow):
         self._execute_button.setEnabled(False)
         self._reset_button.setEnabled(False)
         self._status_bar.showMessage(NO_OPERATION_SELECTED)
+        self._value_group.setTitle(VALUE_LABEL)
+        self._value_input.setPlaceholderText("Enter value")
+        self._operation_description.setText("")

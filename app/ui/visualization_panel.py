@@ -7,7 +7,9 @@ from app.core.constants import (
     VISUALIZATION_PANEL_STYLE,
     SELECT_DATA_STRUCTURE_TEXT,
     CHOOSE_DATA_STRUCTURE_TEXT,
-    VISUALIZATION_PANEL_MIN_WIDTH
+    VISUALIZATION_PANEL_MIN_WIDTH,
+    TEXT_PRIMARY,
+    TEXT_MUTED
 )
 
 
@@ -46,12 +48,12 @@ class VisualizationPanel(QWidget):
         self._current_data_structure = name
         self._title_label.setText(name)
         self._subtitle_label.setText(f"{name} visualization will be implemented here.")
-        self._title_label.setStyleSheet("font-size: 28px; font-weight: 300; color: #333333;")
-        self._subtitle_label.setStyleSheet("font-size: 16px; font-weight: 400; color: #888888;")
+        self._title_label.setStyleSheet(f"font-size: 28px; font-weight: 300; color: {TEXT_PRIMARY};")
+        self._subtitle_label.setStyleSheet(f"font-size: 16px; font-weight: 400; color: {TEXT_MUTED};")
 
     def reset(self):
         self._current_data_structure = None
         self._title_label.setText(SELECT_DATA_STRUCTURE_TEXT)
         self._subtitle_label.setText(CHOOSE_DATA_STRUCTURE_TEXT)
-        self._title_label.setStyleSheet("font-size: 28px; font-weight: 300; color: #333333;")
-        self._subtitle_label.setStyleSheet("font-size: 16px; font-weight: 400; color: #888888;")
+        self._title_label.setStyleSheet(f"font-size: 28px; font-weight: 300; color: {TEXT_PRIMARY};")
+        self._subtitle_label.setStyleSheet(f"font-size: 16px; font-weight: 400; color: {TEXT_MUTED};")
