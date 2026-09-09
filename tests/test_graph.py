@@ -38,6 +38,13 @@ class TestGraphAddVertex(unittest.TestCase):
         self.assertEqual(g.size(), 3)
         self.assertEqual(g.vertices(), [1, 2, 3])
 
+    def test_insertion_order_preserved(self):
+        g = UndirectedGraph()
+        g.add_vertex("C")
+        g.add_vertex("A")
+        g.add_vertex("B")
+        self.assertEqual(g.vertices(), ["C", "A", "B"])
+
 
 class TestGraphHasVertex(unittest.TestCase):
     def test_has_vertex_empty(self):
@@ -115,14 +122,21 @@ class TestGraphAddEdge(unittest.TestCase):
         with self.assertRaises(GraphVertexError):
             g.add_edge("A", "B")
 
-    def test_duplicate_edge_handled(self):
+    def test_duplicate_edge_raises(self):
         g = UndirectedGraph()
         g.add_vertex("A")
         g.add_vertex("B")
         g.add_edge("A", "B")
+        with self.assertRaises(GraphEdgeError):
+            g.add_edge("A", "B")
+
+    def test_duplicate_edge_reverse_raises(self):
+        g = UndirectedGraph()
+        g.add_vertex("A")
+        g.add_vertex("B")
         g.add_edge("A", "B")
-        self.assertTrue(g.has_edge("A", "B"))
-        self.assertEqual(len(g.edges()), 1)
+        with self.assertRaises(GraphEdgeError):
+            g.add_edge("B", "A")
 
 
 class TestGraphHasEdge(unittest.TestCase):
@@ -201,13 +215,23 @@ class TestGraphNeighbors(unittest.TestCase):
         with self.assertRaises(GraphVertexError):
             g.neighbors("A")
 
+    def test_neighbors_deterministic(self):
+        g = UndirectedGraph()
+        g.add_vertex("A")
+        g.add_vertex("C")
+        g.add_vertex("B")
+        g.add_edge("A", "C")
+        g.add_edge("A", "B")
+        result = g.neighbors("A")
+        self.assertEqual(result, ["B", "C"])
+
 
 class TestGraphVerticesEdges(unittest.TestCase):
-    def test_vertices(self):
+    def test_vertices_insertion_order(self):
         g = UndirectedGraph()
         for v in ["C", "A", "B"]:
             g.add_vertex(v)
-        self.assertEqual(g.vertices(), ["A", "B", "C"])
+        self.assertEqual(g.vertices(), ["C", "A", "B"])
 
     def test_edges(self):
         g = UndirectedGraph()
@@ -218,17 +242,48 @@ class TestGraphVerticesEdges(unittest.TestCase):
         edges = g.edges()
         self.assertEqual(edges, [("A", "B"), ("B", "C")])
 
-    def test_edges_unique(self):
-        g = UndirectedGraph()
-        g.add_vertex("A")
-        g.add_vertex("B")
-        g.add_edge("A", "B")
-        g.add_edge("B", "A")
-        self.assertEqual(len(g.edges()), 1)
-
     def test_edges_empty(self):
         g = UndirectedGraph()
         self.assertEqual(g.edges(), [])
+
+
+class TestGraphMixedTypes(unittest.TestCase):
+    def test_mixed_string_int_vertices(self):
+        g = UndirectedGraph()
+        g.add_vertex("A")
+        g.add_vertex(1)
+        g.add_vertex("B")
+        self.assertEqual(g.size(), 3)
+        self.assertIn("A", g.vertices())
+        self.assertIn(1, g.vertices())
+        self.assertIn("B", g.vertices())
+
+    def test_mixed_type_edges(self):
+        g = UndirectedGraph()
+        g.add_vertex("A")
+        g.add_vertex(1)
+        g.add_edge("A", 1)
+        self.assertTrue(g.has_edge("A", 1))
+        self.assertTrue(g.has_edge(1, "A"))
+
+    def test_mixed_type_neighbors(self):
+        g = UndirectedGraph()
+        g.add_vertex("A")
+        g.add_vertex(1)
+        g.add_vertex("B")
+        g.add_edge("A", 1)
+        g.add_edge("A", "B")
+        neighbors = g.neighbors("A")
+        self.assertIn(1, neighbors)
+        self.assertIn("B", neighbors)
+
+    def test_mixed_type_edges_display(self):
+        g = UndirectedGraph()
+        g.add_vertex("A")
+        g.add_vertex(1)
+        g.add_edge("A", 1)
+        edges = g.edges()
+        self.assertEqual(len(edges), 1)
 
 
 class TestGraphSizeIsEmpty(unittest.TestCase):

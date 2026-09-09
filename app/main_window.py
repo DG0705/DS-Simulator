@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QLabel, QComboBox, QLineEdit, QPushButton, QGroupBox,
     QStatusBar, QSizePolicy, QSpacerItem, QMessageBox
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 
 from app.core.constants import (
     APP_TITLE,
@@ -45,6 +45,7 @@ from data_structures.linked_list import (
 from data_structures.bst import BinarySearchTree, BSTError, BSTEmptyError, BSTValueError
 from data_structures.heap import MaxHeap, HeapError, HeapEmptyError, HeapValueError
 from data_structures.graph import UndirectedGraph, GraphError, GraphEmptyError, GraphVertexError, GraphEdgeError, GraphValueError
+from algorithms.graph_algorithms import bfs, dfs
 from visualization.array_visualizer import ArrayVisualizer
 from visualization.stack_visualizer import StackVisualizer
 from visualization.queue_visualizer import QueueVisualizer
@@ -72,6 +73,14 @@ class MainWindow(QMainWindow):
         self._heap_visualizer = None
         self._graph = None
         self._graph_visualizer = None
+        self._traversal_timer = QTimer()
+        self._traversal_timer.setInterval(600)
+        self._traversal_timer.timeout.connect(self._on_traversal_tick)
+        self._traversal_steps = []
+        self._traversal_step_index = 0
+        self._traversal_order = []
+        self._traversal_visited = set()
+        self._traversal_algorithm = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -381,6 +390,7 @@ class MainWindow(QMainWindow):
 
     def _remove_current_visualizer(self, center_layout):
         """Remove any currently displayed visualizer from the layout."""
+        self._stop_traversal()
         if self._array_visualizer:
             center_layout.removeWidget(self._array_visualizer)
             self._array_visualizer.deleteLater()
@@ -1381,6 +1391,10 @@ class MainWindow(QMainWindow):
                 self._execute_graph_vertices()
             elif operation == "Edges":
                 self._execute_graph_edges()
+            elif operation == "BFS":
+                self._execute_graph_bfs(value_text)
+            elif operation == "DFS":
+                self._execute_graph_dfs(value_text)
             elif operation == "Size":
                 self._execute_graph_size()
             elif operation == "Is Empty":
@@ -1489,6 +1503,91 @@ class MainWindow(QMainWindow):
         op_info = GRAPH_OPERATIONS["Edges"]
         self._update_status("Edges", op_info["time_complexity"], op_info["space_complexity"])
 
+    def _execute_graph_bfs(self, value_text: str):
+        self._stop_traversal()
+        if self._graph.is_empty():
+            self._show_error("Cannot traverse an empty graph.")
+            return
+        start = self._parse_graph_vertex(value_text)
+        if not self._graph.has_vertex(start):
+            self._show_error(f"Vertex '{start}' not found in graph.")
+            return
+        try:
+            order, steps = bfs(self._graph, start)
+        except GraphError as e:
+            self._show_error(str(e))
+            return
+        self._traversal_algorithm = "BFS"
+        self._traversal_order = order
+        self._traversal_steps = steps
+        self._traversal_step_index = 0
+        self._traversal_visited = set()
+        self._graph_visualizer.clear_highlights()
+        self._graph_visualizer.set_feedback("BFS traversal started...")
+        op_info = GRAPH_OPERATIONS["BFS"]
+        self._update_status("BFS", op_info["time_complexity"], op_info["space_complexity"])
+        self._traversal_timer.start()
+
+    def _execute_graph_dfs(self, value_text: str):
+        self._stop_traversal()
+        if self._graph.is_empty():
+            self._show_error("Cannot traverse an empty graph.")
+            return
+        start = self._parse_graph_vertex(value_text)
+        if not self._graph.has_vertex(start):
+            self._show_error(f"Vertex '{start}' not found in graph.")
+            return
+        try:
+            order, steps = dfs(self._graph, start)
+        except GraphError as e:
+            self._show_error(str(e))
+            return
+        self._traversal_algorithm = "DFS"
+        self._traversal_order = order
+        self._traversal_steps = steps
+        self._traversal_step_index = 0
+        self._traversal_visited = set()
+        self._graph_visualizer.clear_highlights()
+        self._graph_visualizer.set_feedback("DFS traversal started...")
+        op_info = GRAPH_OPERATIONS["DFS"]
+        self._update_status("DFS", op_info["time_complexity"], op_info["space_complexity"])
+        self._traversal_timer.start()
+
+    def _on_traversal_tick(self):
+        if self._traversal_step_index >= len(self._traversal_steps):
+            self._traversal_timer.stop()
+            order_str = " → ".join(str(v) for v in self._traversal_order)
+            self._graph_visualizer.set_feedback(
+                f"{self._traversal_algorithm} traversal complete: {order_str}"
+            )
+            return
+        current, newly_discovered = self._traversal_steps[self._traversal_step_index]
+        self._traversal_visited.add(current)
+        self._graph_visualizer.set_traversal_state(
+            visited=self._traversal_visited,
+            current=current,
+            queued=set(newly_discovered),
+        )
+        if self._traversal_step_index == 0:
+            self._graph_visualizer.set_feedback(
+                f"{self._traversal_algorithm}: visiting {current}"
+            )
+        else:
+            disc_str = ", ".join(str(v) for v in newly_discovered) if newly_discovered else "none"
+            self._graph_visualizer.set_feedback(
+                f"{self._traversal_algorithm}: visiting {current} | discovered: {disc_str}"
+            )
+        self._traversal_step_index += 1
+
+    def _stop_traversal(self):
+        if self._traversal_timer.isActive():
+            self._traversal_timer.stop()
+        self._traversal_steps = []
+        self._traversal_step_index = 0
+        self._traversal_order = []
+        self._traversal_visited = set()
+        self._traversal_algorithm = None
+
     def _execute_graph_size(self):
         sz = self._graph.size()
         self._refresh_graph()
@@ -1538,6 +1637,7 @@ class MainWindow(QMainWindow):
         QMessageBox.warning(self, "Error", message)
 
     def _on_reset(self):
+        self._stop_traversal()
         center_widget = self._visualization_panel.parent()
         if center_widget:
             center_layout = center_widget.layout()

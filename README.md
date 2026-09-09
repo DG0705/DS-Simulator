@@ -74,9 +74,8 @@ The goal of this project is to create an interactive educational tool that helps
 - [x] Unit tests (`tests/test_linked_list.py`)
 
 **Upcoming Phases:**
-- [ ] Phase 9: Sorting algorithms
-- [ ] Phase 10: Searching algorithms
-- [ ] Phase 11: Graph algorithms (BFS, DFS, Dijkstra, etc.)
+- [ ] Phase 10: Sorting algorithms
+- [ ] Phase 11: Searching algorithms
 
 ## Installation
 
@@ -119,8 +118,17 @@ python -m pytest tests/test_linked_list.py -v
 # Run BST tests specifically
 python -m pytest tests/test_bst.py -v
 
-# Run with unittest
-python -m unittest tests.test_array tests.test_stack tests.test_queue tests.test_linked_list tests.test_bst -v
+# Run Heap tests specifically
+python -m pytest tests/test_heap.py -v
+
+# Run Graph tests specifically
+python -m pytest tests/test_graph.py -v
+
+# Run Graph Algorithm tests specifically
+python -m pytest tests/test_graph_algorithms.py -v
+
+# Run with unittest (all tests)
+python -m unittest tests.test_array tests.test_stack tests.test_queue tests.test_linked_list tests.test_bst tests.test_heap tests.test_graph tests.test_graph_algorithms -v
 ```
 
 ## Array Visualization
@@ -432,9 +440,10 @@ The Graph module is the seventh functional data structure in the application.
 ### Properties
 
 - **Undirected**: Edges have no direction; A—B is the same as B—A
-- **Adjacency list**: Dictionary mapping vertices to sets of neighbors
+- **Adjacency list**: OrderedDict mapping vertices to sets of neighbors
 - **No self-loops**: Vertices cannot connect to themselves
-- **No duplicate edges**: Adding an existing edge is handled gracefully
+- **No duplicate edges**: Adding an existing edge raises GraphEdgeError
+- **Mixed types**: Supports both string and numeric vertices
 
 ### Supported Operations
 
@@ -447,6 +456,8 @@ The Graph module is the seventh functional data structure in the application.
 | **Neighbors** | Return adjacent vertices | `A` (vertex value) |
 | **Vertices** | Return all vertices | (no input required) |
 | **Edges** | Return all unique edges | (no input required) |
+| **BFS** | Breadth-first traversal | `A` (start vertex) |
+| **DFS** | Depth-first traversal | `A` (start vertex) |
 | **Size** | Return vertex count | (no input required) |
 | **Is Empty** | Check if graph is empty | (no input required) |
 | **Has Vertex** | Check if vertex exists | `A` (vertex value) |
@@ -460,8 +471,26 @@ The Graph module is the seventh functional data structure in the application.
 - Edges drawn as lines between vertices (no arrows)
 - Green highlight for newly added vertices
 - Blue highlight for edge operations
+- Purple highlight for visited vertices (BFS/DFS)
+- Red highlight for current vertex during traversal
+- Yellow highlight for queued/pending vertices
+- Step-by-step traversal animation with QTimer
 - Empty state message when graph is empty
 - Scrolling for large graphs
+
+### BFS (Breadth-First Search)
+
+- Queue-based level-by-level traversal
+- Visits all neighbors at current depth before moving deeper
+- Uses `collections.deque` for O(1) queue operations
+- Deterministic order via sorted neighbor iteration
+
+### DFS (Depth-First Search)
+
+- Stack-based exploration of branches
+- Explores as deep as possible before backtracking
+- Uses explicit stack (iterative implementation)
+- Deterministic order via sorted neighbor iteration
 
 ### Vertex Values
 
@@ -479,16 +508,16 @@ For edge operations (Add Edge, Remove Edge, Has Edge), input format is `A,B` wit
 | Add Edge | O(1) | O(1) |
 | Remove Vertex | O(degree) | O(1) |
 | Remove Edge | O(1) | O(1) |
-| Neighbors | O(1) | O(degree) |
-| Vertices | O(V log V) | O(V) |
+| Neighbors | O(degree * log(degree)) | O(degree) |
+| Vertices | O(V) | O(V) |
 | Edges | O(V + E) | O(E) |
+| BFS | O(V + E) | O(V) |
+| DFS | O(V + E) | O(V) |
 | Size | O(1) | O(1) |
 | Is Empty | O(1) | O(1) |
 | Has Vertex | O(1) | O(1) |
 | Has Edge | O(1) | O(1) |
 | Clear | O(1) | O(1) |
-
-**Note:** BFS and DFS will be added in a future phase.
 
 ## Project Structure
 
@@ -516,8 +545,9 @@ DataStructureVisualizer/
 │   ├── bst.py             # Binary Search Tree implementation
 │   ├── heap.py            # Max Heap implementation
 │   └── graph.py           # Undirected Graph implementation
-├── algorithms/            # Algorithm implementations (future)
-│   └── __init__.py
+├── algorithms/            # Algorithm implementations
+│   ├── __init__.py
+│   └── graph_algorithms.py  # BFS and DFS traversal algorithms
 ├── visualization/         # Visualization utilities
 │   ├── __init__.py
 │   ├── array_visualizer.py     # Array visualization widget
@@ -535,7 +565,8 @@ DataStructureVisualizer/
     ├── test_linked_list.py  # Linked List unit tests
     ├── test_bst.py        # BST unit tests
     ├── test_heap.py       # Heap unit tests
-    └── test_graph.py      # Graph unit tests
+    ├── test_graph.py      # Graph unit tests
+    └── test_graph_algorithms.py  # BFS/DFS algorithm unit tests
 ```
 
 ## Architecture Overview
@@ -552,13 +583,14 @@ DataStructureVisualizer/
 - **data_structures/bst.py**: Pure Python Binary Search Tree implementation (no GUI dependencies)
 - **data_structures/heap.py**: Pure Python Max Heap implementation (no GUI dependencies)
 - **data_structures/graph.py**: Pure Python Undirected Graph implementation (no GUI dependencies)
+- **algorithms/graph_algorithms.py**: Pure Python BFS and DFS traversal algorithms (no GUI dependencies)
 - **visualization/array_visualizer.py**: PyQt6 widget for Array visualization
 - **visualization/stack_visualizer.py**: PyQt6 widget for Stack visualization
 - **visualization/queue_visualizer.py**: PyQt6 widget for Queue visualization
 - **visualization/linked_list_visualizer.py**: PyQt6 widget for Linked List visualization
 - **visualization/bst_visualizer.py**: PyQt6 widget for BST visualization
 - **visualization/heap_visualizer.py**: PyQt6 widget for Heap visualization
-- **visualization/graph_visualizer.py**: PyQt6 widget for Graph visualization
+- **visualization/graph_visualizer.py**: PyQt6 widget for Graph visualization with traversal support
 - **tests/test_array.py**: Unit tests for Array data structure
 - **tests/test_stack.py**: Unit tests for Stack data structure
 - **tests/test_queue.py**: Unit tests for Queue data structure
@@ -566,6 +598,7 @@ DataStructureVisualizer/
 - **tests/test_bst.py**: Unit tests for BST data structure
 - **tests/test_heap.py**: Unit tests for Heap data structure
 - **tests/test_graph.py**: Unit tests for Graph data structure
+- **tests/test_graph_algorithms.py**: Unit tests for BFS and DFS algorithms
 
 The codebase follows separation of concerns - UI code is separate from data structure logic, making it easy to extend.
 

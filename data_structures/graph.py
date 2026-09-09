@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Set, Tuple
+from collections import OrderedDict
 
 
 class GraphError(Exception):
@@ -29,13 +30,15 @@ class GraphValueError(GraphError):
 class UndirectedGraph:
     """Undirected graph using adjacency-list representation.
 
-    Vertices are stored as dictionary keys mapping to sets of neighbors.
+    Vertices are stored in an OrderedDict mapping to sets of neighbors.
     Self-loops are rejected.
-    Duplicate edges are handled gracefully.
+    Duplicate edges raise GraphEdgeError.
+    Mixed vertex types (strings, numbers) are supported.
     """
 
     def __init__(self) -> None:
-        self._adjacency: Dict[Any, Set[Any]] = {}
+        self._adjacency: Dict[Any, Set[Any]] = OrderedDict()
+        self._insertion_order: List[Any] = []
 
     def add_vertex(self, vertex: Any) -> None:
         """Add a vertex to the graph. O(1).
@@ -45,12 +48,14 @@ class UndirectedGraph:
         if vertex in self._adjacency:
             raise GraphVertexError(f"Vertex '{vertex}' already exists in graph.")
         self._adjacency[vertex] = set()
+        self._insertion_order.append(vertex)
 
     def add_edge(self, vertex1: Any, vertex2: Any) -> None:
         """Add an undirected edge between two vertices. O(1).
 
         Raises GraphValueError for self-loops.
         Raises GraphVertexError if either vertex does not exist.
+        Raises GraphEdgeError if edge already exists.
         """
         if vertex1 == vertex2:
             raise GraphValueError("Self-loops are not allowed.")
@@ -58,6 +63,8 @@ class UndirectedGraph:
             raise GraphVertexError(f"Vertex '{vertex1}' not found in graph.")
         if vertex2 not in self._adjacency:
             raise GraphVertexError(f"Vertex '{vertex2}' not found in graph.")
+        if vertex2 in self._adjacency[vertex1]:
+            raise GraphEdgeError(f"Edge '{vertex1}' — '{vertex2}' already exists.")
         self._adjacency[vertex1].add(vertex2)
         self._adjacency[vertex2].add(vertex1)
 
@@ -71,6 +78,7 @@ class UndirectedGraph:
         for neighbor in list(self._adjacency[vertex]):
             self._adjacency[neighbor].discard(vertex)
         del self._adjacency[vertex]
+        self._insertion_order.remove(vertex)
 
     def remove_edge(self, vertex1: Any, vertex2: Any) -> None:
         """Remove an undirected edge between two vertices. O(1).
@@ -88,29 +96,37 @@ class UndirectedGraph:
         self._adjacency[vertex2].discard(vertex1)
 
     def neighbors(self, vertex: Any) -> List[Any]:
-        """Return list of neighbors. O(1).
+        """Return sorted list of neighbors for deterministic ordering. O(degree * log(degree)).
 
         Raises GraphVertexError if vertex does not exist.
         """
         if vertex not in self._adjacency:
             raise GraphVertexError(f"Vertex '{vertex}' not found in graph.")
-        return sorted(self._adjacency[vertex])
+        return sorted(self._adjacency[vertex], key=str)
 
     def vertices(self) -> List[Any]:
-        """Return sorted list of all vertices. O(V log V)."""
-        return sorted(self._adjacency.keys())
+        """Return list of all vertices in insertion order. O(V).
+
+        Preserves insertion order for display and GUI stability.
+        """
+        return list(self._insertion_order)
+
+    def vertex_set(self) -> set:
+        """Return the set of all vertices. O(1)."""
+        return set(self._adjacency.keys())
 
     def edges(self) -> List[Tuple[Any, Any]]:
-        """Return unique undirected edges as sorted tuples. O(V + E).
+        """Return unique undirected edges as normalized tuples. O(V + E).
 
-        Each edge appears once as (min, max).
+        Each edge appears once as (min, max) using string comparison
+        for consistent ordering with mixed vertex types.
         """
         edge_set: Set[Tuple[Any, Any]] = set()
         for v in self._adjacency:
             for n in self._adjacency[v]:
-                edge = (min(v, n), max(v, n))
+                edge = (min(v, n, key=str), max(v, n, key=str))
                 edge_set.add(edge)
-        return sorted(edge_set)
+        return sorted(edge_set, key=lambda e: (str(e[0]), str(e[1])))
 
     def has_vertex(self, vertex: Any) -> bool:
         """Check if vertex exists. O(1)."""
@@ -133,6 +149,7 @@ class UndirectedGraph:
     def clear(self) -> None:
         """Remove all vertices and edges. O(1)."""
         self._adjacency.clear()
+        self._insertion_order.clear()
 
     def __len__(self) -> int:
         return len(self._adjacency)

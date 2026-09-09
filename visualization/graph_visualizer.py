@@ -26,6 +26,9 @@ class GraphVisualizer(QWidget):
         self._highlighted_edges = set()
         self._new_vertex = None
         self._feedback = ""
+        self._traversal_visited = set()
+        self._traversal_current = None
+        self._traversal_queued = set()
         self._init_ui()
 
     def _init_ui(self):
@@ -69,6 +72,9 @@ class GraphVisualizer(QWidget):
         self._highlighted_vertices = set(highlight_vertices) if highlight_vertices else set()
         self._highlighted_edges = set(highlight_edges) if highlight_edges else set()
         self._new_vertex = new_vertex
+        self._traversal_visited = set()
+        self._traversal_current = None
+        self._traversal_queued = set()
 
         self._paint_area.update()
         self._update_canvas_size()
@@ -90,6 +96,15 @@ class GraphVisualizer(QWidget):
         self._highlighted_vertices = set()
         self._highlighted_edges = set()
         self._new_vertex = None
+        self._traversal_visited = set()
+        self._traversal_current = None
+        self._traversal_queued = set()
+        self._paint_area.update()
+
+    def set_traversal_state(self, visited=None, current=None, queued=None):
+        self._traversal_visited = set(visited) if visited else set()
+        self._traversal_current = current
+        self._traversal_queued = set(queued) if queued else set()
         self._paint_area.update()
 
 
@@ -107,6 +122,9 @@ class _PaintArea(QWidget):
         self._normal_color = QColor(ACCENT_PRIMARY)
         self._highlight_color = QColor("#2563EB")
         self._new_color = QColor("#15803D")
+        self._visited_color = QColor("#7C3AED")
+        self._current_color = QColor("#DC2626")
+        self._queued_color = QColor("#F59E0B")
         self._edge_color = QColor(BORDER_LIGHT)
         self._edge_highlight_color = QColor("#2563EB")
         self._text_color = QColor(TEXT_ON_ACCENT)
@@ -122,6 +140,9 @@ class _PaintArea(QWidget):
         highlighted_v = self._visualizer._highlighted_vertices
         highlighted_e = self._visualizer._highlighted_edges
         new_vertex = self._visualizer._new_vertex
+        visited = self._visualizer._traversal_visited
+        current = self._visualizer._traversal_current
+        queued = self._visualizer._traversal_queued
 
         if not vertices:
             painter.setPen(QColor("#9CA3AF"))
@@ -149,8 +170,17 @@ class _PaintArea(QWidget):
                 pos = positions[v]
                 is_highlighted = v in highlighted_v
                 is_new = new_vertex is not None and v == new_vertex
+                is_visited = v in visited
+                is_current = v == current
+                is_queued = v in queued
 
-                if is_new:
+                if is_current:
+                    fill_color = self._current_color
+                elif is_visited:
+                    fill_color = self._visited_color
+                elif is_queued:
+                    fill_color = self._queued_color
+                elif is_new:
                     fill_color = self._new_color
                 elif is_highlighted:
                     fill_color = self._highlight_color
