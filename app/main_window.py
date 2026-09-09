@@ -29,6 +29,8 @@ from app.core.constants import (
     BST_OPERATION_NAMES,
     HEAP_OPERATIONS,
     HEAP_OPERATION_NAMES,
+    GRAPH_OPERATIONS,
+    GRAPH_OPERATION_NAMES,
     DATA_STRUCTURE_OPERATIONS,
 )
 from app.ui.sidebar import Sidebar
@@ -42,12 +44,14 @@ from data_structures.linked_list import (
 )
 from data_structures.bst import BinarySearchTree, BSTError, BSTEmptyError, BSTValueError
 from data_structures.heap import MaxHeap, HeapError, HeapEmptyError, HeapValueError
+from data_structures.graph import UndirectedGraph, GraphError, GraphEmptyError, GraphVertexError, GraphEdgeError, GraphValueError
 from visualization.array_visualizer import ArrayVisualizer
 from visualization.stack_visualizer import StackVisualizer
 from visualization.queue_visualizer import QueueVisualizer
 from visualization.linked_list_visualizer import LinkedListVisualizer
 from visualization.bst_visualizer import BSTVisualizer
 from visualization.heap_visualizer import HeapVisualizer
+from visualization.graph_visualizer import GraphVisualizer
 
 
 class MainWindow(QMainWindow):
@@ -66,6 +70,8 @@ class MainWindow(QMainWindow):
         self._bst_visualizer = None
         self._heap = None
         self._heap_visualizer = None
+        self._graph = None
+        self._graph_visualizer = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -185,6 +191,8 @@ class MainWindow(QMainWindow):
             self._setup_bst()
         elif name == "Heap":
             self._setup_heap()
+        elif name == "Graph":
+            self._setup_graph()
         else:
             self._visualization_panel.set_data_structure(name)
             self._status_bar.showMessage(f"Selected: {name}")
@@ -255,6 +263,16 @@ class MainWindow(QMainWindow):
         self._operation_combo.clear()
         self._operation_combo.addItems(HEAP_OPERATION_NAMES)
         self._on_operation_changed(HEAP_OPERATION_NAMES[0])
+
+    def _setup_graph(self):
+        self._graph = UndirectedGraph()
+        self._create_graph_visualizer()
+        self._status_bar.showMessage("Selected: Graph")
+        self._enable_controls()
+
+        self._operation_combo.clear()
+        self._operation_combo.addItems(GRAPH_OPERATION_NAMES)
+        self._on_operation_changed(GRAPH_OPERATION_NAMES[0])
 
     def _create_array_visualizer(self):
         center_widget = self._visualization_panel.parent()
@@ -346,6 +364,21 @@ class MainWindow(QMainWindow):
         if center_widget and center_layout:
             center_layout.insertWidget(0, self._heap_visualizer, 1)
 
+    def _create_graph_visualizer(self):
+        center_widget = self._visualization_panel.parent()
+        if center_widget:
+            center_layout = center_widget.layout()
+            if center_layout:
+                self._remove_current_visualizer(center_layout)
+                center_layout.removeWidget(self._visualization_panel)
+                self._visualization_panel.hide()
+
+        self._graph_visualizer = GraphVisualizer()
+        self._graph_visualizer.set_graph(self._graph.vertices(), self._graph.edges())
+
+        if center_widget and center_layout:
+            center_layout.insertWidget(0, self._graph_visualizer, 1)
+
     def _remove_current_visualizer(self, center_layout):
         """Remove any currently displayed visualizer from the layout."""
         if self._array_visualizer:
@@ -372,6 +405,10 @@ class MainWindow(QMainWindow):
             center_layout.removeWidget(self._heap_visualizer)
             self._heap_visualizer.deleteLater()
             self._heap_visualizer = None
+        if self._graph_visualizer:
+            center_layout.removeWidget(self._graph_visualizer)
+            self._graph_visualizer.deleteLater()
+            self._graph_visualizer = None
 
     def _enable_controls(self):
         self._operation_combo.setEnabled(True)
@@ -395,6 +432,8 @@ class MainWindow(QMainWindow):
             op_info = BST_OPERATIONS.get(operation)
         elif self._current_data_structure == "Heap":
             op_info = HEAP_OPERATIONS.get(operation)
+        elif self._current_data_structure == "Graph":
+            op_info = GRAPH_OPERATIONS.get(operation)
         else:
             return
 
@@ -438,6 +477,8 @@ class MainWindow(QMainWindow):
             self._execute_bst_operation(operation, value_text)
         elif self._current_data_structure == "Heap":
             self._execute_heap_operation(operation, value_text)
+        elif self._current_data_structure == "Graph":
+            self._execute_graph_operation(operation, value_text)
 
     def _execute_array_operation(self, operation: str, value_text: str):
         try:
@@ -1258,8 +1299,8 @@ class MainWindow(QMainWindow):
         if not value_text:
             raise HeapValueError("Value required for Insert")
         value = self._parse_heap_value(value_text)
-        self._heap.insert(value)
-        self._heap_visualizer.set_heap(self._heap.traverse(), new_index=0)
+        final_index = self._heap.insert(value)
+        self._heap_visualizer.set_heap(self._heap.traverse(), new_index=final_index)
         self._heap_visualizer.set_feedback(f"Inserted {value} into heap.")
         op_info = HEAP_OPERATIONS["Insert"]
         self._update_status("Insert", op_info["time_complexity"], op_info["space_complexity"])
@@ -1320,6 +1361,174 @@ class MainWindow(QMainWindow):
         op_info = HEAP_OPERATIONS["Clear"]
         self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
 
+    # ============================================================
+    # GRAPH OPERATIONS
+    # ============================================================
+
+    def _execute_graph_operation(self, operation: str, value_text: str):
+        try:
+            if operation == "Add Vertex":
+                self._execute_graph_add_vertex(value_text)
+            elif operation == "Add Edge":
+                self._execute_graph_add_edge(value_text)
+            elif operation == "Remove Vertex":
+                self._execute_graph_remove_vertex(value_text)
+            elif operation == "Remove Edge":
+                self._execute_graph_remove_edge(value_text)
+            elif operation == "Neighbors":
+                self._execute_graph_neighbors(value_text)
+            elif operation == "Vertices":
+                self._execute_graph_vertices()
+            elif operation == "Edges":
+                self._execute_graph_edges()
+            elif operation == "Size":
+                self._execute_graph_size()
+            elif operation == "Is Empty":
+                self._execute_graph_is_empty()
+            elif operation == "Has Vertex":
+                self._execute_graph_has_vertex(value_text)
+            elif operation == "Has Edge":
+                self._execute_graph_has_edge(value_text)
+            elif operation == "Clear":
+                self._execute_graph_clear()
+        except GraphError as e:
+            self._show_error(self._format_graph_error(e, operation))
+            self._status_bar.showMessage(f"Error: {e}")
+
+    def _format_graph_error(self, error: GraphError, operation: str) -> str:
+        if isinstance(error, GraphVertexError):
+            return str(error)
+        if isinstance(error, GraphEdgeError):
+            return str(error)
+        if isinstance(error, GraphValueError):
+            return str(error)
+        return str(error)
+
+    def _parse_graph_vertex(self, text: str) -> str:
+        v = text.strip()
+        if not v:
+            raise GraphValueError("Vertex cannot be empty.")
+        return v
+
+    def _parse_graph_pair(self, text: str) -> tuple:
+        parts = [p.strip() for p in text.split(",")]
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            raise GraphValueError("Enter two vertices separated by a comma (e.g. A,B).")
+        return parts[0], parts[1]
+
+    def _refresh_graph(self, highlight_v=None, highlight_e=None, new_v=None):
+        self._graph_visualizer.set_graph(
+            self._graph.vertices(), self._graph.edges(),
+            highlight_vertices=highlight_v,
+            highlight_edges=highlight_e,
+            new_vertex=new_v,
+        )
+
+    def _execute_graph_add_vertex(self, value_text: str):
+        v = self._parse_graph_vertex(value_text)
+        self._graph.add_vertex(v)
+        self._refresh_graph(new_v=v)
+        self._graph_visualizer.set_feedback(f"Added vertex {v}.")
+        op_info = GRAPH_OPERATIONS["Add Vertex"]
+        self._update_status("Add Vertex", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_graph_add_edge(self, value_text: str):
+        v1, v2 = self._parse_graph_pair(value_text)
+        self._graph.add_edge(v1, v2)
+        edge_key = (min(v1, v2), max(v1, v2))
+        self._refresh_graph(highlight_e=[edge_key])
+        self._graph_visualizer.set_feedback(f"Added edge {v1} — {v2}.")
+        op_info = GRAPH_OPERATIONS["Add Edge"]
+        self._update_status("Add Edge", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_graph_remove_vertex(self, value_text: str):
+        v = self._parse_graph_vertex(value_text)
+        self._graph.remove_vertex(v)
+        self._refresh_graph()
+        self._graph_visualizer.set_feedback(f"Removed vertex {v}.")
+        op_info = GRAPH_OPERATIONS["Remove Vertex"]
+        self._update_status("Remove Vertex", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_graph_remove_edge(self, value_text: str):
+        v1, v2 = self._parse_graph_pair(value_text)
+        self._graph.remove_edge(v1, v2)
+        self._refresh_graph()
+        self._graph_visualizer.set_feedback(f"Removed edge {v1} — {v2}.")
+        op_info = GRAPH_OPERATIONS["Remove Edge"]
+        self._update_status("Remove Edge", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_graph_neighbors(self, value_text: str):
+        v = self._parse_graph_vertex(value_text)
+        neighbors = self._graph.neighbors(v)
+        self._refresh_graph(highlight_v=[v])
+        if neighbors:
+            self._graph_visualizer.set_feedback(f"Neighbors of {v}: {', '.join(str(n) for n in neighbors)}.")
+        else:
+            self._graph_visualizer.set_feedback(f"Vertex {v} has no neighbors.")
+        op_info = GRAPH_OPERATIONS["Neighbors"]
+        self._update_status("Neighbors", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_graph_vertices(self):
+        verts = self._graph.vertices()
+        self._refresh_graph()
+        if verts:
+            self._graph_visualizer.set_feedback(f"Vertices: {', '.join(str(v) for v in verts)}.")
+        else:
+            self._graph_visualizer.set_feedback("Graph has no vertices.")
+        op_info = GRAPH_OPERATIONS["Vertices"]
+        self._update_status("Vertices", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_graph_edges(self):
+        edges = self._graph.edges()
+        self._refresh_graph()
+        if edges:
+            edge_strs = [f"{a}—{b}" for a, b in edges]
+            self._graph_visualizer.set_feedback(f"Edges: {', '.join(edge_strs)}.")
+        else:
+            self._graph_visualizer.set_feedback("Graph has no edges.")
+        op_info = GRAPH_OPERATIONS["Edges"]
+        self._update_status("Edges", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_graph_size(self):
+        sz = self._graph.size()
+        self._refresh_graph()
+        self._graph_visualizer.set_feedback(f"Graph size = {sz} vertices.")
+        op_info = GRAPH_OPERATIONS["Size"]
+        self._update_status("Size", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_graph_is_empty(self):
+        empty = self._graph.is_empty()
+        msg = "Graph is empty." if empty else "Graph is not empty."
+        self._refresh_graph()
+        self._graph_visualizer.set_feedback(msg)
+        op_info = GRAPH_OPERATIONS["Is Empty"]
+        self._update_status("Is Empty", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_graph_has_vertex(self, value_text: str):
+        v = self._parse_graph_vertex(value_text)
+        has = self._graph.has_vertex(v)
+        self._refresh_graph(highlight_v=[v] if has else None)
+        self._graph_visualizer.set_feedback(f"Has vertex '{v}': {has}.")
+        op_info = GRAPH_OPERATIONS["Has Vertex"]
+        self._update_status("Has Vertex", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_graph_has_edge(self, value_text: str):
+        v1, v2 = self._parse_graph_pair(value_text)
+        has = self._graph.has_edge(v1, v2)
+        edge_key = (min(v1, v2), max(v1, v2)) if has else None
+        self._refresh_graph(highlight_e=[edge_key] if edge_key else None)
+        self._graph_visualizer.set_feedback(f"Has edge {v1}—{v2}: {has}.")
+        op_info = GRAPH_OPERATIONS["Has Edge"]
+        self._update_status("Has Edge", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _execute_graph_clear(self):
+        self._graph.clear()
+        self._graph_visualizer.set_graph([], [])
+        self._graph_visualizer.clear_highlights()
+        self._graph_visualizer.set_feedback("Graph cleared.")
+        op_info = GRAPH_OPERATIONS["Clear"]
+        self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
+
     def _update_status(self, operation: str, time_complexity: str, space_complexity: str):
         self._status_bar.showMessage(
             f"Operation: {operation} | Time: {time_complexity} | Space: {space_complexity}"
@@ -1329,62 +1538,13 @@ class MainWindow(QMainWindow):
         QMessageBox.warning(self, "Error", message)
 
     def _on_reset(self):
-        if self._array_visualizer:
-            center_widget = self._visualization_panel.parent()
-            if center_widget:
-                center_layout = center_widget.layout()
-                if center_layout:
-                    center_layout.removeWidget(self._array_visualizer)
-                    self._array_visualizer.deleteLater()
-                    self._array_visualizer = None
-
-        if self._stack_visualizer:
-            center_widget = self._visualization_panel.parent()
-            if center_widget:
-                center_layout = center_widget.layout()
-                if center_layout:
-                    center_layout.removeWidget(self._stack_visualizer)
-                    self._stack_visualizer.deleteLater()
-                    self._stack_visualizer = None
-
-        if self._queue_visualizer:
-            center_widget = self._visualization_panel.parent()
-            if center_widget:
-                center_layout = center_widget.layout()
-                if center_layout:
-                    center_layout.removeWidget(self._queue_visualizer)
-                    self._queue_visualizer.deleteLater()
-                    self._queue_visualizer = None
-
-        if self._linked_list_visualizer:
-            center_widget = self._visualization_panel.parent()
-            if center_widget:
-                center_layout = center_widget.layout()
-                if center_layout:
-                    center_layout.removeWidget(self._linked_list_visualizer)
-                    self._linked_list_visualizer.deleteLater()
-                    self._linked_list_visualizer = None
-
-        if self._bst_visualizer:
-            center_widget = self._visualization_panel.parent()
-            if center_widget:
-                center_layout = center_widget.layout()
-                if center_layout:
-                    center_layout.removeWidget(self._bst_visualizer)
-                    self._bst_visualizer.deleteLater()
-                    self._bst_visualizer = None
-
-        if self._heap_visualizer:
-            center_widget = self._visualization_panel.parent()
-            if center_widget:
-                center_layout = center_widget.layout()
-                if center_layout:
-                    center_layout.removeWidget(self._heap_visualizer)
-                    self._heap_visualizer.deleteLater()
-                    self._heap_visualizer = None
+        center_widget = self._visualization_panel.parent()
+        if center_widget:
+            center_layout = center_widget.layout()
+            if center_layout:
+                self._remove_current_visualizer(center_layout)
 
         self._visualization_panel.show()
-        center_widget = self._visualization_panel.parent()
         if center_widget:
             center_layout = center_widget.layout()
             if center_layout:
@@ -1396,6 +1556,7 @@ class MainWindow(QMainWindow):
         self._linked_list = None
         self._bst = None
         self._heap = None
+        self._graph = None
         self._current_data_structure = None
         self._visualization_panel.reset()
         self._operation_combo.clear()

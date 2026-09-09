@@ -74,10 +74,9 @@ The goal of this project is to create an interactive educational tool that helps
 - [x] Unit tests (`tests/test_linked_list.py`)
 
 **Upcoming Phases:**
-- [ ] Phase 8: Graph visualization
 - [ ] Phase 9: Sorting algorithms
 - [ ] Phase 10: Searching algorithms
-- [ ] Phase 11: Graph algorithms
+- [ ] Phase 11: Graph algorithms (BFS, DFS, Dijkstra, etc.)
 
 ## Installation
 
@@ -426,6 +425,71 @@ Uses bottom-up heap construction for O(n) complexity:
 | Is Empty | O(1) | O(1) |
 | Clear | O(1) | O(1) |
 
+## Undirected Graph Visualization
+
+The Graph module is the seventh functional data structure in the application.
+
+### Properties
+
+- **Undirected**: Edges have no direction; A—B is the same as B—A
+- **Adjacency list**: Dictionary mapping vertices to sets of neighbors
+- **No self-loops**: Vertices cannot connect to themselves
+- **No duplicate edges**: Adding an existing edge is handled gracefully
+
+### Supported Operations
+
+| Operation | Description | Input Format |
+|-----------|-------------|--------------|
+| **Add Vertex** | Add a vertex to the graph | `A` (vertex value) |
+| **Add Edge** | Add undirected edge | `A,B` (two vertices) |
+| **Remove Vertex** | Remove vertex and its edges | `A` (vertex value) |
+| **Remove Edge** | Remove undirected edge | `A,B` (two vertices) |
+| **Neighbors** | Return adjacent vertices | `A` (vertex value) |
+| **Vertices** | Return all vertices | (no input required) |
+| **Edges** | Return all unique edges | (no input required) |
+| **Size** | Return vertex count | (no input required) |
+| **Is Empty** | Check if graph is empty | (no input required) |
+| **Has Vertex** | Check if vertex exists | `A` (vertex value) |
+| **Has Edge** | Check if edge exists | `A,B` (two vertices) |
+| **Clear** | Remove all vertices/edges | (no input required) |
+
+### Visual Features
+
+- Circular layout for vertex placement
+- Vertices drawn as circles with labels
+- Edges drawn as lines between vertices (no arrows)
+- Green highlight for newly added vertices
+- Blue highlight for edge operations
+- Empty state message when graph is empty
+- Scrolling for large graphs
+
+### Vertex Values
+
+Supports both string and numeric vertices:
+- Strings: `A`, `B`, `C`
+- Numbers: `1`, `2`, `3`
+
+For edge operations (Add Edge, Remove Edge, Has Edge), input format is `A,B` with comma separation.
+
+### Time & Space Complexity
+
+| Operation | Time Complexity | Space Complexity |
+|-----------|-----------------|------------------|
+| Add Vertex | O(1) | O(1) |
+| Add Edge | O(1) | O(1) |
+| Remove Vertex | O(degree) | O(1) |
+| Remove Edge | O(1) | O(1) |
+| Neighbors | O(1) | O(degree) |
+| Vertices | O(V log V) | O(V) |
+| Edges | O(V + E) | O(E) |
+| Size | O(1) | O(1) |
+| Is Empty | O(1) | O(1) |
+| Has Vertex | O(1) | O(1) |
+| Has Edge | O(1) | O(1) |
+| Clear | O(1) | O(1) |
+
+**Note:** BFS and DFS will be added in a future phase.
+
 ## Project Structure
 
 ```
@@ -450,7 +514,8 @@ DataStructureVisualizer/
 │   ├── queue.py           # Queue implementation (collections.deque)
 │   ├── linked_list.py     # Singly Linked List implementation
 │   ├── bst.py             # Binary Search Tree implementation
-│   └── heap.py            # Max Heap implementation
+│   ├── heap.py            # Max Heap implementation
+│   └── graph.py           # Undirected Graph implementation
 ├── algorithms/            # Algorithm implementations (future)
 │   └── __init__.py
 ├── visualization/         # Visualization utilities
@@ -460,7 +525,8 @@ DataStructureVisualizer/
 │   ├── queue_visualizer.py     # Queue visualization widget
 │   ├── linked_list_visualizer.py  # Linked List visualization widget
 │   ├── bst_visualizer.py       # BST visualization widget
-│   └── heap_visualizer.py      # Heap visualization widget
+│   ├── heap_visualizer.py      # Heap visualization widget
+│   └── graph_visualizer.py     # Graph visualization widget
 └── tests/                 # Unit tests
     ├── __init__.py
     ├── test_array.py      # Array unit tests
@@ -468,7 +534,8 @@ DataStructureVisualizer/
     ├── test_queue.py      # Queue unit tests
     ├── test_linked_list.py  # Linked List unit tests
     ├── test_bst.py        # BST unit tests
-    └── test_heap.py       # Heap unit tests
+    ├── test_heap.py       # Heap unit tests
+    └── test_graph.py      # Graph unit tests
 ```
 
 ## Architecture Overview
@@ -484,18 +551,21 @@ DataStructureVisualizer/
 - **data_structures/linked_list.py**: Pure Python Singly Linked List implementation (no GUI dependencies)
 - **data_structures/bst.py**: Pure Python Binary Search Tree implementation (no GUI dependencies)
 - **data_structures/heap.py**: Pure Python Max Heap implementation (no GUI dependencies)
+- **data_structures/graph.py**: Pure Python Undirected Graph implementation (no GUI dependencies)
 - **visualization/array_visualizer.py**: PyQt6 widget for Array visualization
 - **visualization/stack_visualizer.py**: PyQt6 widget for Stack visualization
 - **visualization/queue_visualizer.py**: PyQt6 widget for Queue visualization
 - **visualization/linked_list_visualizer.py**: PyQt6 widget for Linked List visualization
 - **visualization/bst_visualizer.py**: PyQt6 widget for BST visualization
 - **visualization/heap_visualizer.py**: PyQt6 widget for Heap visualization
+- **visualization/graph_visualizer.py**: PyQt6 widget for Graph visualization
 - **tests/test_array.py**: Unit tests for Array data structure
 - **tests/test_stack.py**: Unit tests for Stack data structure
 - **tests/test_queue.py**: Unit tests for Queue data structure
 - **tests/test_linked_list.py**: Unit tests for Linked List data structure
 - **tests/test_bst.py**: Unit tests for BST data structure
 - **tests/test_heap.py**: Unit tests for Heap data structure
+- **tests/test_graph.py**: Unit tests for Graph data structure
 
 The codebase follows separation of concerns - UI code is separate from data structure logic, making it easy to extend.
 

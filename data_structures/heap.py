@@ -60,8 +60,8 @@ class MaxHeap:
     def _has_right(self, i: int) -> bool:
         return self._right(i) < len(self._data)
 
-    def _heapify_up(self, i: int) -> None:
-        """Restore heap property by moving node up. O(log n)."""
+    def _heapify_up(self, i: int) -> int:
+        """Restore heap property by moving node up. Returns final index. O(log n)."""
         while self._has_parent(i):
             parent_i = self._parent(i)
             if self._data[i] > self._data[parent_i]:
@@ -69,6 +69,7 @@ class MaxHeap:
                 i = parent_i
             else:
                 break
+        return i
 
     def _heapify_down(self, i: int) -> None:
         """Restore heap property by moving node down. O(log n)."""
@@ -88,10 +89,11 @@ class MaxHeap:
             else:
                 break
 
-    def insert(self, value: Any) -> None:
-        """Insert a value into the heap. O(log n)."""
+    def insert(self, value: Any) -> int:
+        """Insert a value into the heap. Returns final index. O(log n)."""
         self._data.append(value)
-        self._heapify_up(len(self._data) - 1)
+        final_index = self._heapify_up(len(self._data) - 1)
+        return final_index
 
     def peek(self) -> Any:
         """Return the maximum value without removing. O(1).

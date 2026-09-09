@@ -832,6 +832,107 @@ HEAP_OPERATIONS = {
 
 HEAP_OPERATION_NAMES = list(HEAP_OPERATIONS.keys())
 
+GRAPH_OPERATIONS = {
+    "Add Vertex": {
+        "input_type": "value",
+        "input_label": "Vertex",
+        "placeholder": "Enter vertex (e.g. A)",
+        "description": "Add a vertex to the graph.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Add Edge": {
+        "input_type": "pair",
+        "input_label": "Vertices",
+        "placeholder": "Enter two vertices, e.g. A,B",
+        "description": "Add an undirected edge between two vertices.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Remove Vertex": {
+        "input_type": "value",
+        "input_label": "Vertex",
+        "placeholder": "Enter vertex (e.g. A)",
+        "description": "Remove a vertex and all its edges.",
+        "time_complexity": "O(degree)",
+        "space_complexity": "O(1)",
+    },
+    "Remove Edge": {
+        "input_type": "pair",
+        "input_label": "Vertices",
+        "placeholder": "Enter two vertices, e.g. A,B",
+        "description": "Remove an undirected edge between two vertices.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Neighbors": {
+        "input_type": "value",
+        "input_label": "Vertex",
+        "placeholder": "Enter vertex (e.g. A)",
+        "description": "Return the list of adjacent vertices.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(degree)",
+    },
+    "Vertices": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Return all vertices in the graph.",
+        "time_complexity": "O(V log V)",
+        "space_complexity": "O(V)",
+    },
+    "Edges": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Return all unique undirected edges.",
+        "time_complexity": "O(V + E)",
+        "space_complexity": "O(E)",
+    },
+    "Size": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Return the number of vertices.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Is Empty": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Check if the graph is empty.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Has Vertex": {
+        "input_type": "value",
+        "input_label": "Vertex",
+        "placeholder": "Enter vertex (e.g. A)",
+        "description": "Check if a vertex exists in the graph.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Has Edge": {
+        "input_type": "pair",
+        "input_label": "Vertices",
+        "placeholder": "Enter two vertices, e.g. A,B",
+        "description": "Check if an edge exists between two vertices.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+    "Clear": {
+        "input_type": "none",
+        "input_label": "Input",
+        "placeholder": "No input required",
+        "description": "Remove all vertices and edges.",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(1)",
+    },
+}
+
+GRAPH_OPERATION_NAMES = list(GRAPH_OPERATIONS.keys())
+
 DATA_STRUCTURE_OPERATIONS = {
     "Array": ARRAY_OPERATION_NAMES,
     "Stack": STACK_OPERATION_NAMES,
@@ -839,5 +940,5 @@ DATA_STRUCTURE_OPERATIONS = {
     "Linked List": LINKED_LIST_OPERATION_NAMES,
     "Binary Search Tree": BST_OPERATION_NAMES,
     "Heap": HEAP_OPERATION_NAMES,
-    "Graph": ["Add Vertex", "Add Edge", "BFS", "DFS"],
+    "Graph": GRAPH_OPERATION_NAMES,
 }
