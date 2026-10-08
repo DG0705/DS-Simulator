@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 
 from app.core.constants import (
     DATA_STRUCTURES,
+    SORTING_ALGORITHMS,
     PLACEHOLDER_BUTTON_STYLE,
     SIDEBAR_STYLE,
     DATA_STRUCTURES_SECTION_TITLE,
@@ -50,7 +51,7 @@ class Sidebar(QWidget):
         scroll_layout.addWidget(section_label)
 
         self._buttons = {}
-        enabled_structures = {"Array", "Stack", "Queue", "Linked List", "Binary Search Tree", "Heap", "Graph"}
+        enabled_structures = {"Array", "Stack", "Queue", "Linked List", "Binary Search Tree", "AVL Tree", "Heap", "Graph"}
         for ds_name in DATA_STRUCTURES:
             if ds_name in enabled_structures:
                 button = self._create_enabled_button(ds_name)
@@ -58,6 +59,23 @@ class Sidebar(QWidget):
                 button = self._create_placeholder_button(ds_name)
             self._buttons[ds_name] = button
             scroll_layout.addWidget(button)
+
+        self._sorting_toggle = QPushButton("Sorting  ▸")
+        self._sorting_toggle.setCheckable(True)
+        self._sorting_toggle.setStyleSheet(ENABLED_BUTTON_STYLE)
+        self._sorting_toggle.clicked.connect(self._toggle_sorting)
+        scroll_layout.addWidget(self._sorting_toggle)
+
+        self._sorting_menu = QWidget()
+        sorting_layout = QVBoxLayout(self._sorting_menu)
+        sorting_layout.setContentsMargins(16, 0, 0, 0)
+        sorting_layout.setSpacing(8)
+        for name in SORTING_ALGORITHMS:
+            button = self._create_enabled_button(name)
+            self._buttons[name] = button
+            sorting_layout.addWidget(button)
+        self._sorting_menu.hide()
+        scroll_layout.addWidget(self._sorting_menu)
 
         scroll_layout.addSpacerItem(
             QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -96,3 +114,7 @@ class Sidebar(QWidget):
         if not self._selected_button.text().endswith("(Coming Soon)"):
             self._selected_button.setChecked(True)
         self.data_structure_selected.emit(name)
+
+    def _toggle_sorting(self, checked):
+        self._sorting_menu.setVisible(checked)
+        self._sorting_toggle.setText("Sorting  ▾" if checked else "Sorting  ▸")

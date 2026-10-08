@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QLabel, QComboBox, QLineEdit, QPushButton, QGroupBox,
-    QStatusBar, QSizePolicy, QSpacerItem, QMessageBox
+    QStatusBar, QSizePolicy, QSpacerItem, QMessageBox, QDialog
 )
 from PyQt6.QtCore import Qt, QTimer
 
@@ -27,14 +27,18 @@ from app.core.constants import (
     LINKED_LIST_OPERATION_NAMES,
     BST_OPERATIONS,
     BST_OPERATION_NAMES,
+    AVL_OPERATIONS,
+    AVL_OPERATION_NAMES,
     HEAP_OPERATIONS,
     HEAP_OPERATION_NAMES,
     GRAPH_OPERATIONS,
     GRAPH_OPERATION_NAMES,
     DATA_STRUCTURE_OPERATIONS,
+    SORTING_ALGORITHMS,
 )
 from app.ui.sidebar import Sidebar
 from app.ui.visualization_panel import VisualizationPanel
+from app.ui.adjacency_matrix_dialog import AdjacencyMatrixDialog
 from data_structures.array import Array, ArrayError, ArrayIndexError, ArrayValueError, ArrayEmptyError
 from data_structures.stack import Stack, StackError, StackEmptyError, StackValueError
 from data_structures.queue import Queue, QueueError, QueueEmptyError, QueueValueError
@@ -43,16 +47,22 @@ from data_structures.linked_list import (
     LinkedListIndexError, LinkedListValueError,
 )
 from data_structures.bst import BinarySearchTree, BSTError, BSTEmptyError, BSTValueError
+from data_structures.avl import AVLTree, AVLStep
 from data_structures.heap import MaxHeap, HeapError, HeapEmptyError, HeapValueError
 from data_structures.graph import UndirectedGraph, GraphError, GraphEmptyError, GraphVertexError, GraphEdgeError, GraphValueError
 from algorithms.graph_algorithms import bfs, dfs
+from algorithms.sorting_algorithms import sorting_trace
 from visualization.array_visualizer import ArrayVisualizer
 from visualization.stack_visualizer import StackVisualizer
 from visualization.queue_visualizer import QueueVisualizer
 from visualization.linked_list_visualizer import LinkedListVisualizer
 from visualization.bst_visualizer import BSTVisualizer
+from visualization.avl_visualizer import AVLVisualizer
 from visualization.heap_visualizer import HeapVisualizer
 from visualization.graph_visualizer import GraphVisualizer
+from visualization.sorting_visualizer import SortingVisualizer
+from visualization.data_structure_code_panel import DataStructureCodePanel
+from visualization.variable_state_panel import VariableStatePanel
 
 
 class MainWindow(QMainWindow):
@@ -69,10 +79,17 @@ class MainWindow(QMainWindow):
         self._linked_list_visualizer = None
         self._bst = None
         self._bst_visualizer = None
+        self._avl = None
+        self._avl_visualizer = None
+        self._avl_plan = None
         self._heap = None
         self._heap_visualizer = None
         self._graph = None
         self._graph_visualizer = None
+        self._sorting_visualizer = None
+        self._sorting_steps = []
+        self._sorting_result = []
+        self._sorting_step_index = 0
         self._traversal_timer = QTimer()
         self._traversal_timer.setInterval(600)
         self._traversal_timer.timeout.connect(self._on_traversal_tick)
@@ -81,6 +98,9 @@ class MainWindow(QMainWindow):
         self._traversal_order = []
         self._traversal_visited = set()
         self._traversal_algorithm = None
+        self._tree_traversal_order = []
+        self._tree_traversal_index = 0
+        self._variable_context = {}
         self._setup_ui()
 
     def _setup_ui(self):
@@ -113,6 +133,17 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(center_widget, 1)
 
+        self._right_panel = QWidget()
+        right_layout = QVBoxLayout(self._right_panel)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(0)
+        self._code_panel = DataStructureCodePanel()
+        self._variable_panel = VariableStatePanel()
+        right_layout.addWidget(self._code_panel, 1)
+        right_layout.addWidget(self._variable_panel)
+        self._right_panel.hide()
+        main_layout.addWidget(self._right_panel)
+
         self._status_bar = QStatusBar()
         self._status_bar.setStyleSheet(STATUS_BAR_STYLE)
         self._status_bar.showMessage(NO_OPERATION_SELECTED)
@@ -121,7 +152,7 @@ class MainWindow(QMainWindow):
     def _create_control_panel(self):
         panel = QWidget()
         panel.setStyleSheet(CONTROL_PANEL_STYLE)
-        panel.setFixedHeight(160)
+        panel.setFixedHeight(180)
         panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         layout = QHBoxLayout(panel)
@@ -146,15 +177,33 @@ class MainWindow(QMainWindow):
         operation_layout.addWidget(self._operation_description)
 
         self._value_group = QGroupBox(VALUE_LABEL)
-        self._value_group.setMinimumWidth(180)
+        self._value_group.setMinimumWidth(280)
         value_layout = QVBoxLayout(self._value_group)
         value_layout.setContentsMargins(12, 20, 12, 12)
         value_layout.setSpacing(8)
 
         self._value_input = QLineEdit()
+        self._value_input.setMinimumHeight(34)
         self._value_input.setPlaceholderText("Enter value")
         self._value_input.setEnabled(False)
         value_layout.addWidget(self._value_input)
+
+        bulk_layout = QHBoxLayout()
+        bulk_layout.setSpacing(6)
+        self._bulk_input = QLineEdit()
+        self._bulk_input.setMinimumHeight(34)
+        self._bulk_input.setPlaceholderText("Values: 10, 20, 30")
+        self._bulk_input.setToolTip("Add several values separated by commas")
+        self._bulk_input.setEnabled(False)
+        self._bulk_input.returnPressed.connect(self._on_add_multiple)
+        bulk_layout.addWidget(self._bulk_input, 1)
+
+        self._bulk_button = QPushButton("Add Multiple")
+        self._bulk_button.setToolTip("Add every value in the comma-separated list")
+        self._bulk_button.setEnabled(False)
+        self._bulk_button.clicked.connect(self._on_add_multiple)
+        bulk_layout.addWidget(self._bulk_button)
+        value_layout.addLayout(bulk_layout)
 
         button_group = QGroupBox()
         button_group.setStyleSheet("QGroupBox { border: none; margin-top: 0; padding-top: 20px; }")
@@ -186,7 +235,12 @@ class MainWindow(QMainWindow):
         return panel
 
     def _on_data_structure_selected(self, name):
+        previous_name = self._current_data_structure
         self._current_data_structure = name
+        self._variable_context = {}
+        self._right_panel.setVisible(name not in SORTING_ALGORITHMS)
+        if name not in SORTING_ALGORITHMS or previous_name not in SORTING_ALGORITHMS:
+            self._bulk_input.clear()
 
         if name == "Array":
             self._setup_array()
@@ -198,10 +252,16 @@ class MainWindow(QMainWindow):
             self._setup_linked_list()
         elif name == "Binary Search Tree":
             self._setup_bst()
+        elif name == "AVL Tree":
+            self._setup_avl()
         elif name == "Heap":
             self._setup_heap()
         elif name == "Graph":
             self._setup_graph()
+        elif name in SORTING_ALGORITHMS:
+            self._setup_sorting(name)
+        if name not in SORTING_ALGORITHMS:
+            self._refresh_variable_panel()
         else:
             self._visualization_panel.set_data_structure(name)
             self._status_bar.showMessage(f"Selected: {name}")
@@ -212,6 +272,32 @@ class MainWindow(QMainWindow):
             self._value_group.setTitle(VALUE_LABEL)
             self._value_input.setPlaceholderText("Enter value")
             self._operation_description.setText("")
+
+    def _setup_sorting(self, name):
+        center_widget = self._visualization_panel.parent()
+        center_layout = center_widget.layout()
+        self._remove_current_visualizer(center_layout)
+        center_layout.removeWidget(self._visualization_panel)
+        self._visualization_panel.hide()
+        self._sorting_visualizer = SortingVisualizer(name)
+        self._sorting_visualizer.step_button.clicked.connect(self._on_sort_step)
+        self._sorting_visualizer.skip_button.clicked.connect(self._on_sort_skip)
+        center_layout.insertWidget(0, self._sorting_visualizer, 1)
+        self._status_bar.showMessage(f"Selected: {name}")
+        self._operation_combo.clear()
+        self._operation_combo.addItem(name)
+        self._operation_combo.setEnabled(False)
+        self._value_group.setTitle("Numbers")
+        self._value_input.clear()
+        self._value_input.setEnabled(False)
+        self._value_input.setPlaceholderText("Use the comma-separated field below")
+        self._bulk_input.setPlaceholderText("e.g. 8, -3, 5, 8, 0")
+        self._bulk_input.setEnabled(True)
+        self._bulk_button.hide()
+        self._bulk_button.setEnabled(False)
+        self._execute_button.setEnabled(True)
+        self._reset_button.setEnabled(True)
+        self._operation_description.setText("Enter integers below, then click Execute to sort.")
 
     def _setup_array(self):
         self._array = Array()
@@ -262,6 +348,16 @@ class MainWindow(QMainWindow):
         self._operation_combo.clear()
         self._operation_combo.addItems(BST_OPERATION_NAMES)
         self._on_operation_changed(BST_OPERATION_NAMES[0])
+
+    def _setup_avl(self):
+        self._avl = AVLTree()
+        self._create_avl_visualizer()
+        self._status_bar.showMessage("Selected: AVL Tree")
+        self._enable_controls()
+
+        self._operation_combo.clear()
+        self._operation_combo.addItems(AVL_OPERATION_NAMES)
+        self._on_operation_changed(AVL_OPERATION_NAMES[0])
 
     def _setup_heap(self):
         self._heap = MaxHeap()
@@ -353,10 +449,24 @@ class MainWindow(QMainWindow):
                 self._visualization_panel.hide()
 
         self._bst_visualizer = BSTVisualizer()
+        self._bst_visualizer.step_button.clicked.connect(self._on_tree_traversal_step)
         self._bst_visualizer.set_tree(self._bst.root)
 
         if center_widget and center_layout:
             center_layout.insertWidget(0, self._bst_visualizer, 1)
+
+    def _create_avl_visualizer(self):
+        center_widget = self._visualization_panel.parent()
+        center_layout = center_widget.layout()
+        self._remove_current_visualizer(center_layout)
+        center_layout.removeWidget(self._visualization_panel)
+        self._visualization_panel.hide()
+
+        self._avl_visualizer = AVLVisualizer()
+        self._avl_visualizer.step_button.clicked.connect(self._on_avl_or_traversal_step)
+        self._avl_visualizer.animation_finished.connect(self._on_avl_animation_finished)
+        self._avl_visualizer.set_tree(self._avl.root)
+        center_layout.insertWidget(0, self._avl_visualizer, 1)
 
     def _create_heap_visualizer(self):
         center_widget = self._visualization_panel.parent()
@@ -383,6 +493,7 @@ class MainWindow(QMainWindow):
                 self._visualization_panel.hide()
 
         self._graph_visualizer = GraphVisualizer()
+        self._graph_visualizer.step_button.clicked.connect(self._on_traversal_tick)
         self._graph_visualizer.set_graph(self._graph.vertices(), self._graph.edges())
 
         if center_widget and center_layout:
@@ -391,6 +502,8 @@ class MainWindow(QMainWindow):
     def _remove_current_visualizer(self, center_layout):
         """Remove any currently displayed visualizer from the layout."""
         self._stop_traversal()
+        self._tree_traversal_order = []
+        self._tree_traversal_index = 0
         if self._array_visualizer:
             center_layout.removeWidget(self._array_visualizer)
             self._array_visualizer.deleteLater()
@@ -411,6 +524,11 @@ class MainWindow(QMainWindow):
             center_layout.removeWidget(self._bst_visualizer)
             self._bst_visualizer.deleteLater()
             self._bst_visualizer = None
+        if self._avl_visualizer:
+            center_layout.removeWidget(self._avl_visualizer)
+            self._avl_visualizer.deleteLater()
+            self._avl_visualizer = None
+        self._avl_plan = None
         if self._heap_visualizer:
             center_layout.removeWidget(self._heap_visualizer)
             self._heap_visualizer.deleteLater()
@@ -419,10 +537,22 @@ class MainWindow(QMainWindow):
             center_layout.removeWidget(self._graph_visualizer)
             self._graph_visualizer.deleteLater()
             self._graph_visualizer = None
+        if self._sorting_visualizer:
+            center_layout.removeWidget(self._sorting_visualizer)
+            self._sorting_visualizer.deleteLater()
+            self._sorting_visualizer = None
+        self._sorting_steps = []
+        self._sorting_result = []
+        self._sorting_step_index = 0
 
     def _enable_controls(self):
+        self._bulk_button.setText("Add Multiple")
+        self._bulk_button.show()
+        self._bulk_input.setPlaceholderText("Values: 10, 20, 30")
         self._operation_combo.setEnabled(True)
         self._value_input.setEnabled(True)
+        self._bulk_input.setEnabled(True)
+        self._bulk_button.setEnabled(True)
         self._execute_button.setEnabled(True)
         self._reset_button.setEnabled(True)
 
@@ -440,6 +570,8 @@ class MainWindow(QMainWindow):
             op_info = LINKED_LIST_OPERATIONS.get(operation)
         elif self._current_data_structure == "Binary Search Tree":
             op_info = BST_OPERATIONS.get(operation)
+        elif self._current_data_structure == "AVL Tree":
+            op_info = AVL_OPERATIONS.get(operation)
         elif self._current_data_structure == "Heap":
             op_info = HEAP_OPERATIONS.get(operation)
         elif self._current_data_structure == "Graph":
@@ -458,6 +590,16 @@ class MainWindow(QMainWindow):
         self._value_group.setTitle(input_label)
         self._value_input.setPlaceholderText(placeholder)
         self._operation_description.setText(description)
+        if self._current_data_structure not in SORTING_ALGORITHMS:
+            self._code_panel.show_operation(self._current_data_structure, operation)
+            self._variable_context = {"operation": operation}
+            self._refresh_variable_panel()
+
+        matrix_input = (
+            self._current_data_structure == "Graph" and operation == "Adjacency Matrix"
+        )
+        self._bulk_input.setVisible(not matrix_input)
+        self._bulk_button.setVisible(not matrix_input)
 
         if input_type == "none":
             self._value_input.setEnabled(False)
@@ -472,8 +614,15 @@ class MainWindow(QMainWindow):
         if not self._current_data_structure:
             return
 
+        if self._current_data_structure in SORTING_ALGORITHMS:
+            self._on_sort_numbers()
+            return
+
         operation = self._operation_combo.currentText()
         value_text = self._value_input.text().strip()
+        self._variable_context = {"operation": operation}
+        if value_text:
+            self._variable_context["input"] = value_text
 
         if self._current_data_structure == "Array":
             self._execute_array_operation(operation, value_text)
@@ -485,10 +634,158 @@ class MainWindow(QMainWindow):
             self._execute_linked_list_operation(operation, value_text)
         elif self._current_data_structure == "Binary Search Tree":
             self._execute_bst_operation(operation, value_text)
+        elif self._current_data_structure == "AVL Tree":
+            self._execute_bst_operation(operation, value_text)
         elif self._current_data_structure == "Heap":
             self._execute_heap_operation(operation, value_text)
         elif self._current_data_structure == "Graph":
             self._execute_graph_operation(operation, value_text)
+        if self._current_data_structure not in SORTING_ALGORITHMS:
+            self._code_panel.highlight_execution()
+            self._refresh_variable_panel()
+
+    def _on_add_multiple(self):
+        """Add a comma-separated list using the selected structure's add operation."""
+        name = self._current_data_structure
+        if name not in DATA_STRUCTURE_OPERATIONS:
+            return
+
+        parts = [part.strip() for part in self._bulk_input.text().split(",")]
+        if not parts or any(not part for part in parts):
+            self._show_error("Enter values separated by commas (e.g. 10, 20, 30).")
+            return
+
+        try:
+            values = parts if name == "Graph" else [int(part) for part in parts]
+        except ValueError:
+            self._show_error("All values must be integers for this data structure.")
+            return
+
+        if name in ("Binary Search Tree", "AVL Tree"):
+            existing = set(self._active_tree.inorder())
+            if len(values) != len(set(values)) or any(value in existing for value in values):
+                self._show_error(f"{self._tree_label} values must be unique and must not already exist.")
+                return
+            if name == "AVL Tree":
+                working = self._avl
+                steps = []
+                for value in values:
+                    next_steps, working = working.plan_insert(value)
+                    steps.extend(
+                        AVLStep(f"Insert {value}: {step.description}", step.root,
+                                step.focus_values, step.rotation_values, step.rotation_type)
+                        for step in next_steps
+                    )
+                self._variable_context = {
+                    "operation": "Add Multiple (Insert)", "input": values
+                }
+                self._start_avl_plan(steps, working, "Insert", values)
+                self._refresh_variable_panel()
+                return
+        elif name == "Graph":
+            existing = self._graph.vertex_set()
+            if len(values) != len(set(values)) or any(value in existing for value in values):
+                self._show_error("Graph vertices must be unique and must not already exist.")
+                return
+
+        if name == "Array":
+            for value in values:
+                self._array.append(value)
+            visualizer = self._array_visualizer
+            visualizer.set_array(self._array.traverse())
+            operation = "Append"
+        elif name == "Stack":
+            for value in values:
+                self._stack.push(value)
+                self._stack_visualizer.animate_push(value, self._stack.traverse())
+            visualizer = self._stack_visualizer
+            operation = "Push"
+        elif name == "Queue":
+            for value in values:
+                self._queue.enqueue(value)
+                self._queue_visualizer.animate_enqueue(value, self._queue.traverse())
+            visualizer = self._queue_visualizer
+            operation = "Enqueue"
+        elif name == "Linked List":
+            for value in values:
+                self._linked_list.insert_at_tail(value)
+            visualizer = self._linked_list_visualizer
+            visualizer.set_list(self._linked_list.traverse())
+            operation = "Insert at Tail"
+        elif name in ("Binary Search Tree", "AVL Tree"):
+            for value in values:
+                self._active_tree.insert(value)
+            visualizer = self._active_tree_visualizer
+            visualizer.set_tree(self._active_tree.root)
+            operation = "Insert"
+        elif name == "Heap":
+            for value in values:
+                self._heap.insert(value)
+            visualizer = self._heap_visualizer
+            visualizer.set_heap(self._heap.traverse())
+            operation = "Insert"
+        else:  # Graph
+            self._stop_traversal()
+            for value in values:
+                self._graph.add_vertex(value)
+            visualizer = self._graph_visualizer
+            self._refresh_graph()
+            operation = "Add Vertex"
+
+        visualizer.set_feedback(f"Added {len(values)} values: {', '.join(map(str, values))}.")
+        operations = {
+            "Array": ARRAY_OPERATIONS, "Stack": STACK_OPERATIONS,
+            "Queue": QUEUE_OPERATIONS, "Linked List": LINKED_LIST_OPERATIONS,
+            "Binary Search Tree": BST_OPERATIONS, "AVL Tree": AVL_OPERATIONS,
+            "Heap": HEAP_OPERATIONS,
+            "Graph": GRAPH_OPERATIONS,
+        }
+        info = operations[name][operation]
+        self._update_status(
+            f"Add Multiple ({operation})",
+            f"{len(values)} × {info['time_complexity']}",
+            f"O({len(values)}) new elements",
+        )
+        self._bulk_input.clear()
+        self._variable_context = {"operation": f"Add Multiple ({operation})", "input": values}
+        self._refresh_variable_panel()
+
+    def _on_sort_numbers(self):
+        parts = [part.strip() for part in self._bulk_input.text().split(",")]
+        if not parts or any(not part for part in parts):
+            self._show_error("Enter integers separated by commas (e.g. 8, -3, 5).")
+            return
+        try:
+            values = [int(part) for part in parts]
+        except ValueError:
+            self._show_error("Sorting requires integers separated by commas.")
+            return
+
+        name = self._current_data_structure
+        self._sorting_steps, self._sorting_result = sorting_trace(name, values)
+        self._sorting_step_index = 0
+        self._sorting_visualizer.start(values, len(self._sorting_steps))
+        complexity = {
+            "Radix Sort": ("O(d × (n + 10))", "O(n + 10)"),
+            "Quick Sort": ("O(n log n) average, O(n²) worst", "O(n) stack worst"),
+            "Merge Sort": ("O(n log n)", "O(n)"),
+        }
+        self._update_status(name, *complexity[name])
+
+    def _on_sort_step(self):
+        if self._sorting_visualizer is None or self._sorting_step_index >= len(self._sorting_steps):
+            return
+        description, snapshot = self._sorting_steps[self._sorting_step_index]
+        self._sorting_step_index += 1
+        self._sorting_visualizer.add_step(
+            self._sorting_step_index, description, snapshot, len(self._sorting_steps)
+        )
+        if self._sorting_step_index == len(self._sorting_steps):
+            self._sorting_visualizer.show_final(self._sorting_result)
+
+    def _on_sort_skip(self):
+        while self._sorting_step_index < len(self._sorting_steps):
+            self._on_sort_step()
 
     def _execute_array_operation(self, operation: str, value_text: str):
         try:
@@ -686,8 +983,7 @@ class MainWindow(QMainWindow):
             raise StackValueError("Value required for Push")
         value = self._parse_value(value_text)
         self._stack.push(value)
-        self._stack_visualizer.set_stack(self._stack.traverse(), preserve_highlights=True)
-        self._stack_visualizer.mark_new_top()
+        self._stack_visualizer.animate_push(value, self._stack.traverse())
         self._stack_visualizer.set_feedback(f"Pushed {value} onto the stack.")
         op_info = STACK_OPERATIONS["Push"]
         self._update_status("Push", op_info["time_complexity"], op_info["space_complexity"])
@@ -695,8 +991,7 @@ class MainWindow(QMainWindow):
     def _execute_pop(self):
         popped_value = self._stack.pop()
         remaining = self._stack.traverse()
-        self._stack_visualizer.set_stack(remaining, preserve_highlights=True)
-        self._stack_visualizer.mark_popped(popped_value)
+        self._stack_visualizer.animate_pop(popped_value, remaining)
         self._stack_visualizer.set_feedback(f"Popped {popped_value} from the stack.")
         op_info = STACK_OPERATIONS["Pop"]
         self._update_status("Pop", op_info["time_complexity"], op_info["space_complexity"])
@@ -784,8 +1079,7 @@ class MainWindow(QMainWindow):
             raise QueueValueError("Value required for Enqueue")
         value = self._parse_value(value_text)
         self._queue.enqueue(value)
-        self._queue_visualizer.set_queue(self._queue.traverse(), preserve_highlights=True)
-        self._queue_visualizer.mark_new_rear()
+        self._queue_visualizer.animate_enqueue(value, self._queue.traverse())
         self._queue_visualizer.set_feedback(f"Enqueued {value} at the rear.")
         op_info = QUEUE_OPERATIONS["Enqueue"]
         self._update_status("Enqueue", op_info["time_complexity"], op_info["space_complexity"])
@@ -793,8 +1087,7 @@ class MainWindow(QMainWindow):
     def _execute_dequeue(self):
         dequeued_value = self._queue.dequeue()
         remaining = self._queue.traverse()
-        self._queue_visualizer.set_queue(remaining, preserve_highlights=True)
-        self._queue_visualizer.mark_dequeued(dequeued_value)
+        self._queue_visualizer.animate_dequeue(dequeued_value, remaining)
         self._queue_visualizer.set_feedback(f"Dequeued {dequeued_value} from the front.")
         op_info = QUEUE_OPERATIONS["Dequeue"]
         self._update_status("Dequeue", op_info["time_complexity"], op_info["space_complexity"])
@@ -1070,7 +1363,25 @@ class MainWindow(QMainWindow):
     # BST OPERATIONS
     # ============================================================
 
+    @property
+    def _active_tree(self):
+        return self._avl if self._current_data_structure == "AVL Tree" else self._bst
+
+    @property
+    def _active_tree_visualizer(self):
+        return self._avl_visualizer if self._current_data_structure == "AVL Tree" else self._bst_visualizer
+
+    @property
+    def _tree_operations(self):
+        return AVL_OPERATIONS if self._current_data_structure == "AVL Tree" else BST_OPERATIONS
+
+    @property
+    def _tree_label(self):
+        return "AVL tree" if self._current_data_structure == "AVL Tree" else "BST"
+
     def _execute_bst_operation(self, operation: str, value_text: str):
+        if operation not in {"Inorder Traversal", "Preorder Traversal", "Postorder Traversal", "Level Order Traversal"}:
+            self._clear_tree_traversal()
         try:
             if operation == "Insert":
                 self._execute_bst_insert(value_text)
@@ -1099,7 +1410,7 @@ class MainWindow(QMainWindow):
             elif operation == "Clear":
                 self._execute_bst_clear()
         except BSTError as e:
-            self._show_error(self._format_bst_error(e, operation))
+            self._show_error(self._format_bst_error(e, operation).replace("BST", self._tree_label))
             self._status_bar.showMessage(f"Error: {e}")
 
     def _format_bst_error(self, error: BSTError, operation: str) -> str:
@@ -1130,122 +1441,204 @@ class MainWindow(QMainWindow):
         if not value_text:
             raise BSTValueError("Value required for Insert")
         value = self._parse_bst_value(value_text)
-        self._bst.insert(value)
-        self._bst_visualizer.set_tree(self._bst.root, new_value=value)
-        self._bst_visualizer.set_feedback(f"Inserted {value} into BST.")
-        op_info = BST_OPERATIONS["Insert"]
+        if self._current_data_structure == "AVL Tree":
+            steps, final_tree = self._avl.plan_insert(value)
+            self._start_avl_plan(steps, final_tree, "Insert", [value])
+            return
+        self._active_tree.insert(value)
+        self._active_tree_visualizer.set_tree(self._active_tree.root, new_value=value)
+        self._active_tree_visualizer.set_feedback(f"Inserted {value} into {self._tree_label}.")
+        op_info = self._tree_operations["Insert"]
         self._update_status("Insert", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_bst_delete(self, value_text: str):
         if not value_text:
             raise BSTValueError("Value required for Delete")
         value = self._parse_bst_value(value_text)
-        self._bst.delete(value)
-        self._bst_visualizer.set_tree(self._bst.root)
-        self._bst_visualizer.set_feedback(f"Deleted {value} from BST.")
-        op_info = BST_OPERATIONS["Delete"]
+        if self._current_data_structure == "AVL Tree":
+            steps, final_tree = self._avl.plan_delete(value)
+            self._start_avl_plan(steps, final_tree, "Delete", [value])
+            return
+        self._active_tree.delete(value)
+        self._active_tree_visualizer.set_tree(self._active_tree.root)
+        self._active_tree_visualizer.set_feedback(f"Deleted {value} from {self._tree_label}.")
+        op_info = self._tree_operations["Delete"]
         self._update_status("Delete", op_info["time_complexity"], op_info["space_complexity"])
+
+    def _start_avl_plan(self, steps, final_tree, operation, values):
+        self._avl_plan = {"steps": steps, "final_tree": final_tree, "index": 0}
+        self._avl_visualizer.set_tree(self._avl.root)
+        self._avl_visualizer.prepare_steps(len(steps))
+        self._execute_button.setEnabled(False)
+        self._bulk_button.setEnabled(False)
+        self._operation_combo.setEnabled(False)
+        self._value_input.setEnabled(False)
+        self._bulk_input.setEnabled(False)
+        info = AVL_OPERATIONS[operation]
+        label = f"{operation} {', '.join(map(str, values))}"
+        self._update_status(label, info["time_complexity"], info["space_complexity"])
+
+    def _on_avl_step(self):
+        plan = self._avl_plan
+        if plan is None or self._avl_visualizer is None:
+            return
+        index = plan["index"]
+        if index >= len(plan["steps"]):
+            return
+        step = plan["steps"][index]
+        animating = self._avl_visualizer.show_step(
+            step, index + 1, len(plan["steps"])
+        )
+        plan["index"] += 1
+        if plan["index"] == len(plan["steps"]) and not animating:
+            self._finish_avl_plan()
+        self._code_panel.highlight_avl_step(step)
+        self._variable_context.update({
+            "step": f"{index + 1}/{len(plan['steps'])}",
+            "focus nodes": list(step.focus_values),
+            "rotation nodes": list(step.rotation_values),
+            "rotation type": step.rotation_type or "none",
+        })
+        self._refresh_variable_panel()
+
+    def _on_avl_or_traversal_step(self):
+        if self._avl_plan is not None:
+            self._on_avl_step()
+        else:
+            self._on_tree_traversal_step()
+
+    def _on_avl_animation_finished(self):
+        plan = self._avl_plan
+        if plan and plan["index"] == len(plan["steps"]):
+            self._finish_avl_plan()
+
+    def _finish_avl_plan(self):
+        plan = self._avl_plan
+        if plan is None:
+            return
+        self._avl = plan["final_tree"]
+        self._avl_plan = None
+        self._avl_visualizer.finish_steps()
+        self._operation_combo.setEnabled(True)
+        self._bulk_input.setEnabled(True)
+        self._bulk_button.setEnabled(True)
+        self._execute_button.setEnabled(True)
+        self._on_operation_changed(self._operation_combo.currentText())
+        self._refresh_variable_panel()
 
     def _execute_bst_search(self, value_text: str):
         if not value_text:
             raise BSTValueError("Value required for Search")
         value = self._parse_bst_value(value_text)
-        path = self._bst.search_path(value)
-        found = self._bst.search(value) is not None
-        self._bst_visualizer.set_tree(self._bst.root, highlight_path=path)
+        path = self._active_tree.search_path(value)
+        found = self._active_tree.search(value) is not None
+        self._active_tree_visualizer.set_tree(self._active_tree.root, highlight_path=path)
         if found:
-            self._bst_visualizer.set_feedback(f"Value {value} found in BST.")
+            self._active_tree_visualizer.set_feedback(f"Value {value} found in {self._tree_label}.")
         else:
-            self._bst_visualizer.set_feedback(f"Value {value} not found in BST.")
-        op_info = BST_OPERATIONS["Search"]
+            self._active_tree_visualizer.set_feedback(f"Value {value} not found in {self._tree_label}.")
+        op_info = self._tree_operations["Search"]
         self._update_status("Search", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_bst_inorder(self):
-        result = self._bst.inorder()
-        if not result:
-            self._bst_visualizer.set_feedback("BST is empty.")
-        else:
-            traversal_str = " → ".join(str(x) for x in result)
-            self._bst_visualizer.set_feedback(f"Inorder: {traversal_str}")
-        self._bst_visualizer.set_tree(self._bst.root)
-        op_info = BST_OPERATIONS["Inorder Traversal"]
-        self._update_status("Inorder Traversal", op_info["time_complexity"], op_info["space_complexity"])
+        self._start_tree_traversal("Inorder Traversal", self._active_tree.inorder())
 
     def _execute_bst_preorder(self):
-        result = self._bst.preorder()
-        if not result:
-            self._bst_visualizer.set_feedback("BST is empty.")
-        else:
-            traversal_str = " → ".join(str(x) for x in result)
-            self._bst_visualizer.set_feedback(f"Preorder: {traversal_str}")
-        self._bst_visualizer.set_tree(self._bst.root)
-        op_info = BST_OPERATIONS["Preorder Traversal"]
-        self._update_status("Preorder Traversal", op_info["time_complexity"], op_info["space_complexity"])
+        self._start_tree_traversal("Preorder Traversal", self._active_tree.preorder())
 
     def _execute_bst_postorder(self):
-        result = self._bst.postorder()
-        if not result:
-            self._bst_visualizer.set_feedback("BST is empty.")
-        else:
-            traversal_str = " → ".join(str(x) for x in result)
-            self._bst_visualizer.set_feedback(f"Postorder: {traversal_str}")
-        self._bst_visualizer.set_tree(self._bst.root)
-        op_info = BST_OPERATIONS["Postorder Traversal"]
-        self._update_status("Postorder Traversal", op_info["time_complexity"], op_info["space_complexity"])
+        self._start_tree_traversal("Postorder Traversal", self._active_tree.postorder())
 
     def _execute_bst_level_order(self):
-        result = self._bst.level_order()
-        if not result:
-            self._bst_visualizer.set_feedback("BST is empty.")
-        else:
-            traversal_str = " → ".join(str(x) for x in result)
-            self._bst_visualizer.set_feedback(f"Level Order: {traversal_str}")
-        self._bst_visualizer.set_tree(self._bst.root)
-        op_info = BST_OPERATIONS["Level Order Traversal"]
-        self._update_status("Level Order Traversal", op_info["time_complexity"], op_info["space_complexity"])
+        self._start_tree_traversal("Level Order Traversal", self._active_tree.level_order())
+
+    def _clear_tree_traversal(self):
+        self._tree_traversal_order = []
+        self._tree_traversal_index = 0
+        visualizer = self._active_tree_visualizer
+        if visualizer is not None and self._avl_plan is None:
+            visualizer.step_button.setEnabled(False)
+            visualizer.progress_label.setText("")
+            visualizer.set_traversal_state()
+
+    def _start_tree_traversal(self, operation, order):
+        self._clear_tree_traversal()
+        visualizer = self._active_tree_visualizer
+        visualizer.set_tree(self._active_tree.root)
+        self._tree_traversal_order = list(order)
+        self._tree_traversal_index = 0
+        visualizer.step_button.setEnabled(bool(order))
+        visualizer.progress_label.setText(f"0 of {len(order)} nodes visited")
+        visualizer.set_feedback(
+            f"{operation}: click Step to visit the first node." if order
+            else f"{self._tree_label} is empty."
+        )
+        op_info = self._tree_operations[operation]
+        self._update_status(operation, op_info["time_complexity"], op_info["space_complexity"])
+
+    def _on_tree_traversal_step(self):
+        order = self._tree_traversal_order
+        index = self._tree_traversal_index
+        if index >= len(order):
+            return
+        self._tree_traversal_index += 1
+        visualizer = self._active_tree_visualizer
+        visualizer.set_traversal_state(order[:index], order[index])
+        visualizer.progress_label.setText(f"{index + 1} of {len(order)} nodes visited")
+        visualizer.set_feedback(
+            f"Visiting {order[index]} | order: {' → '.join(map(str, order[:index + 1]))}"
+        )
+        visualizer.step_button.setEnabled(index + 1 < len(order))
+        self._code_panel.highlight_execution()
+        self._variable_context.update({
+            "current node": order[index],
+            "visited": order[:index + 1],
+            "remaining": order[index + 1:],
+        })
+        self._refresh_variable_panel()
 
     def _execute_bst_find_min(self):
-        value = self._bst.find_min()
-        self._bst_visualizer.set_tree(self._bst.root)
-        self._bst_visualizer.set_feedback(f"Minimum value: {value}")
-        op_info = BST_OPERATIONS["Find Minimum"]
+        value = self._active_tree.find_min()
+        self._active_tree_visualizer.set_tree(self._active_tree.root)
+        self._active_tree_visualizer.set_feedback(f"Minimum value: {value}")
+        op_info = self._tree_operations["Find Minimum"]
         self._update_status("Find Minimum", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_bst_find_max(self):
-        value = self._bst.find_max()
-        self._bst_visualizer.set_tree(self._bst.root)
-        self._bst_visualizer.set_feedback(f"Maximum value: {value}")
-        op_info = BST_OPERATIONS["Find Maximum"]
+        value = self._active_tree.find_max()
+        self._active_tree_visualizer.set_tree(self._active_tree.root)
+        self._active_tree_visualizer.set_feedback(f"Maximum value: {value}")
+        op_info = self._tree_operations["Find Maximum"]
         self._update_status("Find Maximum", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_bst_height(self):
-        h = self._bst.height()
-        self._bst_visualizer.set_tree(self._bst.root)
-        self._bst_visualizer.set_feedback(f"Height of BST: {h}")
-        op_info = BST_OPERATIONS["Height"]
+        h = self._active_tree.height()
+        self._active_tree_visualizer.set_tree(self._active_tree.root)
+        self._active_tree_visualizer.set_feedback(f"Height of {self._tree_label}: {h}")
+        op_info = self._tree_operations["Height"]
         self._update_status("Height", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_bst_size(self):
-        sz = self._bst.size()
-        self._bst_visualizer.set_tree(self._bst.root)
-        self._bst_visualizer.set_feedback(f"Size of BST: {sz}")
-        op_info = BST_OPERATIONS["Size"]
+        sz = self._active_tree.size()
+        self._active_tree_visualizer.set_tree(self._active_tree.root)
+        self._active_tree_visualizer.set_feedback(f"Size of {self._tree_label}: {sz}")
+        op_info = self._tree_operations["Size"]
         self._update_status("Size", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_bst_is_empty(self):
-        empty = self._bst.is_empty()
-        msg = "BST is empty." if empty else "BST is not empty."
-        self._bst_visualizer.set_tree(self._bst.root)
-        self._bst_visualizer.set_feedback(msg)
-        op_info = BST_OPERATIONS["Is Empty"]
+        empty = self._active_tree.is_empty()
+        msg = f"{self._tree_label} is empty." if empty else f"{self._tree_label} is not empty."
+        self._active_tree_visualizer.set_tree(self._active_tree.root)
+        self._active_tree_visualizer.set_feedback(msg)
+        op_info = self._tree_operations["Is Empty"]
         self._update_status("Is Empty", op_info["time_complexity"], op_info["space_complexity"])
 
     def _execute_bst_clear(self):
-        self._bst.clear()
-        self._bst_visualizer.set_tree(None)
-        self._bst_visualizer.clear_highlights()
-        self._bst_visualizer.set_feedback("BST cleared.")
-        op_info = BST_OPERATIONS["Clear"]
+        self._active_tree.clear()
+        self._active_tree_visualizer.set_tree(None)
+        self._active_tree_visualizer.clear_highlights()
+        self._active_tree_visualizer.set_feedback(f"{self._tree_label} cleared.")
+        op_info = self._tree_operations["Clear"]
         self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
 
     # ============================================================
@@ -1376,8 +1769,12 @@ class MainWindow(QMainWindow):
     # ============================================================
 
     def _execute_graph_operation(self, operation: str, value_text: str):
+        if operation not in {"BFS", "DFS"}:
+            self._stop_traversal()
         try:
-            if operation == "Add Vertex":
+            if operation == "Adjacency Matrix":
+                self._execute_graph_adjacency_matrix(value_text)
+            elif operation == "Add Vertex":
                 self._execute_graph_add_vertex(value_text)
             elif operation == "Add Edge":
                 self._execute_graph_add_edge(value_text)
@@ -1408,6 +1805,41 @@ class MainWindow(QMainWindow):
         except GraphError as e:
             self._show_error(self._format_graph_error(e, operation))
             self._status_bar.showMessage(f"Error: {e}")
+
+    def _execute_graph_adjacency_matrix(self, value_text):
+        try:
+            node_count = int(value_text)
+        except ValueError:
+            self._show_error("Enter a whole number of nodes between 1 and 20.")
+            return
+        if not 1 <= node_count <= 20:
+            self._show_error("The number of nodes must be between 1 and 20.")
+            return
+
+        dialog = AdjacencyMatrixDialog(node_count, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        matrix = dialog.matrix()
+        graph = UndirectedGraph()
+        for index in range(node_count):
+            graph.add_vertex(str(index + 1))
+        edge_count = 0
+        for row in range(node_count):
+            for column in range(row + 1, node_count):
+                if matrix[row][column]:
+                    graph.add_edge(str(row + 1), str(column + 1))
+                    edge_count += 1
+        self._stop_traversal()
+        self._graph = graph
+        self._refresh_graph()
+        self._graph_visualizer.set_feedback(
+            f"Built graph from adjacency matrix: {node_count} nodes, {edge_count} edges."
+        )
+        info = GRAPH_OPERATIONS["Adjacency Matrix"]
+        self._update_status(
+            "Build from Adjacency Matrix", info["time_complexity"], info["space_complexity"]
+        )
 
     def _format_graph_error(self, error: GraphError, operation: str) -> str:
         if isinstance(error, GraphVertexError):
@@ -1526,7 +1958,8 @@ class MainWindow(QMainWindow):
         self._graph_visualizer.set_feedback("BFS traversal started...")
         op_info = GRAPH_OPERATIONS["BFS"]
         self._update_status("BFS", op_info["time_complexity"], op_info["space_complexity"])
-        self._traversal_timer.start()
+        self._graph_visualizer.step_button.setEnabled(bool(steps))
+        self._graph_visualizer.progress_label.setText(f"0 of {len(steps)} nodes visited")
 
     def _execute_graph_dfs(self, value_text: str):
         self._stop_traversal()
@@ -1551,15 +1984,11 @@ class MainWindow(QMainWindow):
         self._graph_visualizer.set_feedback("DFS traversal started...")
         op_info = GRAPH_OPERATIONS["DFS"]
         self._update_status("DFS", op_info["time_complexity"], op_info["space_complexity"])
-        self._traversal_timer.start()
+        self._graph_visualizer.step_button.setEnabled(bool(steps))
+        self._graph_visualizer.progress_label.setText(f"0 of {len(steps)} nodes visited")
 
     def _on_traversal_tick(self):
         if self._traversal_step_index >= len(self._traversal_steps):
-            self._traversal_timer.stop()
-            order_str = " → ".join(str(v) for v in self._traversal_order)
-            self._graph_visualizer.set_feedback(
-                f"{self._traversal_algorithm} traversal complete: {order_str}"
-            )
             return
         current, newly_discovered = self._traversal_steps[self._traversal_step_index]
         self._traversal_visited.add(current)
@@ -1578,6 +2007,22 @@ class MainWindow(QMainWindow):
                 f"{self._traversal_algorithm}: visiting {current} | discovered: {disc_str}"
             )
         self._traversal_step_index += 1
+        self._graph_visualizer.progress_label.setText(
+            f"{self._traversal_step_index} of {len(self._traversal_steps)} nodes visited"
+        )
+        if self._traversal_step_index == len(self._traversal_steps):
+            self._graph_visualizer.step_button.setEnabled(False)
+            order_str = " → ".join(str(v) for v in self._traversal_order)
+            self._graph_visualizer.set_feedback(
+                f"{self._traversal_algorithm} complete: {order_str}"
+            )
+        self._code_panel.highlight_execution()
+        self._variable_context.update({
+            "current vertex": current,
+            "visited": list(self._traversal_order[:self._traversal_step_index]),
+            "discovered": list(newly_discovered),
+        })
+        self._refresh_variable_panel()
 
     def _stop_traversal(self):
         if self._traversal_timer.isActive():
@@ -1587,6 +2032,9 @@ class MainWindow(QMainWindow):
         self._traversal_order = []
         self._traversal_visited = set()
         self._traversal_algorithm = None
+        if self._graph_visualizer is not None:
+            self._graph_visualizer.step_button.setEnabled(False)
+            self._graph_visualizer.progress_label.setText("")
 
     def _execute_graph_size(self):
         sz = self._graph.size()
@@ -1628,6 +2076,63 @@ class MainWindow(QMainWindow):
         op_info = GRAPH_OPERATIONS["Clear"]
         self._update_status("Clear", op_info["time_complexity"], op_info["space_complexity"])
 
+    def _refresh_variable_panel(self):
+        """Refresh the live variables shown for the selected data structure."""
+        name = self._current_data_structure
+        if not name or name in SORTING_ALGORITHMS or not hasattr(self, "_variable_panel"):
+            return
+        variables = dict(self._variable_context)
+        if name == "Array" and self._array is not None:
+            values = self._array.traverse()
+            variables.update({"size": self._array.size(), "elements": values})
+        elif name == "Stack" and self._stack is not None:
+            values = self._stack.traverse()
+            variables.update({
+                "size": self._stack.size(), "top": values[0] if values else "None",
+                "top → bottom": values,
+            })
+        elif name == "Queue" and self._queue is not None:
+            values = self._queue.traverse()
+            variables.update({
+                "size": self._queue.size(), "front": values[0] if values else "None",
+                "rear": values[-1] if values else "None", "front → rear": values,
+            })
+        elif name == "Linked List" and self._linked_list is not None:
+            values = self._linked_list.traverse()
+            variables.update({
+                "size": self._linked_list.size(),
+                "head": self._linked_list.head.data if self._linked_list.head else "None",
+                "tail": self._linked_list.tail.data if self._linked_list.tail else "None",
+                "nodes": values,
+            })
+        elif name in {"Binary Search Tree", "AVL Tree"} and self._active_tree is not None:
+            tree = self._active_tree
+            root = tree.root
+            variables.update({
+                "size": tree.size(), "root": root.value if root else "None",
+                "height": tree.height(), "inorder": tree.inorder(),
+            })
+            if name == "AVL Tree" and root:
+                left_height = tree._node_height(root.left)
+                right_height = tree._node_height(root.right)
+                variables.update({
+                    "root left height": left_height,
+                    "root right height": right_height,
+                    "root balance factor": left_height - right_height,
+                })
+        elif name == "Heap" and self._heap is not None:
+            values = self._heap.traverse()
+            variables.update({
+                "size": self._heap.size(), "maximum": values[0] if values else "None",
+                "heap array": values,
+            })
+        elif name == "Graph" and self._graph is not None:
+            variables.update({
+                "vertex count": self._graph.size(), "edge count": len(self._graph.edges()),
+                "vertices": self._graph.vertices(), "edges": self._graph.edges(),
+            })
+        self._variable_panel.set_variables(variables)
+
     def _update_status(self, operation: str, time_complexity: str, space_complexity: str):
         self._status_bar.showMessage(
             f"Operation: {operation} | Time: {time_complexity} | Space: {space_complexity}"
@@ -1655,6 +2160,7 @@ class MainWindow(QMainWindow):
         self._queue = None
         self._linked_list = None
         self._bst = None
+        self._avl = None
         self._heap = None
         self._graph = None
         self._current_data_structure = None
@@ -1664,9 +2170,17 @@ class MainWindow(QMainWindow):
         self._operation_combo.setEnabled(False)
         self._value_input.clear()
         self._value_input.setEnabled(False)
+        self._bulk_input.clear()
+        self._bulk_input.setEnabled(False)
+        self._bulk_button.setText("Add Multiple")
+        self._bulk_button.show()
+        self._bulk_input.setPlaceholderText("Values: 10, 20, 30")
+        self._bulk_button.setEnabled(False)
         self._execute_button.setEnabled(False)
         self._reset_button.setEnabled(False)
         self._status_bar.showMessage(NO_OPERATION_SELECTED)
         self._value_group.setTitle(VALUE_LABEL)
         self._value_input.setPlaceholderText("Enter value")
         self._operation_description.setText("")
+        self._right_panel.hide()
+        self._variable_context = {}

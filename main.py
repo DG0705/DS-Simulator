@@ -9,13 +9,13 @@ def main():
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
-
+ 
     app = QApplication(sys.argv)
     app.setApplicationName("Data Structure Visualizer")
     app.setOrganizationName("ROSP Academic Project")
 
     window = MainWindow()
-    window.show()
+    window.showMaximized()
 
     sys.exit(app.exec())
 

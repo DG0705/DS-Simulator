@@ -1,6 +1,6 @@
 import math
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QScrollArea, QSizePolicy
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QRectF, QPointF
 from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush
@@ -15,8 +15,6 @@ class GraphVisualizer(QWidget):
     """Visualizes an undirected graph with circular layout."""
 
     NODE_RADIUS = 24
-    PADDING = 60
-    MIN_SPACING = 80
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -40,12 +38,11 @@ class GraphVisualizer(QWidget):
 
         self._scroll_area = QScrollArea()
         self._scroll_area.setWidgetResizable(True)
-        self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll_area.setStyleSheet(SCROLLBAR_STYLE)
 
         self._canvas = QWidget()
-        self._canvas.setMinimumSize(400, 300)
         self._paint_area = _PaintArea(self)
         self._paint_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
@@ -65,6 +62,15 @@ class GraphVisualizer(QWidget):
         self._feedback_label.setFixedHeight(36)
         layout.addWidget(self._feedback_label)
 
+        controls = QHBoxLayout()
+        controls.setContentsMargins(12, 6, 12, 8)
+        self.progress_label = QLabel("")
+        controls.addWidget(self.progress_label, 1)
+        self.step_button = QPushButton("Step")
+        self.step_button.setEnabled(False)
+        controls.addWidget(self.step_button)
+        layout.addLayout(controls)
+
     def set_graph(self, vertices, edges, highlight_vertices=None,
                   highlight_edges=None, new_vertex=None):
         self._vertices = list(vertices) if vertices else []
@@ -77,16 +83,6 @@ class GraphVisualizer(QWidget):
         self._traversal_queued = set()
 
         self._paint_area.update()
-        self._update_canvas_size()
-
-    def _update_canvas_size(self):
-        n = len(self._vertices)
-        if n == 0:
-            self._canvas.setMinimumSize(400, 200)
-            return
-        diameter = 2 * self.NODE_RADIUS + self.MIN_SPACING
-        size = max(400, n * diameter + 2 * self.PADDING)
-        self._canvas.setMinimumSize(int(size), int(size))
 
     def set_feedback(self, message: str):
         self._feedback = message
@@ -117,7 +113,6 @@ class _PaintArea(QWidget):
     def __init__(self, visualizer: GraphVisualizer):
         super().__init__()
         self._visualizer = visualizer
-        self.setMinimumSize(400, 300)
 
         self._normal_color = QColor(ACCENT_PRIMARY)
         self._highlight_color = QColor("#2563EB")
@@ -151,7 +146,7 @@ class _PaintArea(QWidget):
             painter.end()
             return
 
-        positions = self._compute_positions(vertices, painter)
+        positions, node_radius = self._compute_positions(vertices)
 
         for v1, v2 in edges:
             if v1 in positions and v2 in positions:
@@ -189,35 +184,40 @@ class _PaintArea(QWidget):
 
                 painter.setPen(QPen(fill_color.darker(110), 2))
                 painter.setBrush(QBrush(fill_color))
-                painter.drawEllipse(pos, self.NODE_RADIUS, self.NODE_RADIUS)
+                painter.drawEllipse(pos, node_radius, node_radius)
 
                 painter.setPen(self._text_color)
-                font = QFont("Segoe UI", self.FONT_SIZE, QFont.Weight.Bold)
+                font_size = max(6, round(self.FONT_SIZE * node_radius / self.NODE_RADIUS))
+                font = QFont("Segoe UI", font_size, QFont.Weight.Bold)
                 painter.setFont(font)
-                painter.drawText(QRectF(pos.x() - self.NODE_RADIUS, pos.y() - self.NODE_RADIUS,
-                                       self.NODE_RADIUS * 2, self.NODE_RADIUS * 2),
+                painter.drawText(QRectF(pos.x() - node_radius, pos.y() - node_radius,
+                                       node_radius * 2, node_radius * 2),
                                  Qt.AlignmentFlag.AlignCenter, str(v))
 
         painter.end()
 
-    def _compute_positions(self, vertices, painter):
+    def _compute_positions(self, vertices):
         n = len(vertices)
         positions = {}
         center_x = self.width() / 2
         center_y = self.height() / 2
+        margin = 12
+        node_radius = min(self.NODE_RADIUS, max(2, min(center_x, center_y) - margin))
 
         if n == 1:
             positions[vertices[0]] = QPointF(center_x, center_y)
         elif n == 2:
-            spacing = 120
+            spacing = min(120, max(0, self.width() - 2 * (node_radius + margin)))
             positions[vertices[0]] = QPointF(center_x - spacing / 2, center_y)
             positions[vertices[1]] = QPointF(center_x + spacing / 2, center_y)
-        else:
-            radius = max(100, min(center_x, center_y) - self.NODE_RADIUS - 20)
+        elif n > 2:
+            available_radius = max(0, min(center_x, center_y) - node_radius - margin)
+            node_radius = min(node_radius, max(2, available_radius * math.sin(math.pi / n) - 3))
+            radius = max(0, min(center_x, center_y) - node_radius - margin)
             for i, v in enumerate(vertices):
                 angle = 2 * math.pi * i / n - math.pi / 2
                 x = center_x + radius * math.cos(angle)
                 y = center_y + radius * math.sin(angle)
                 positions[v] = QPointF(x, y)
 
-        return positions
+        return positions, node_radius

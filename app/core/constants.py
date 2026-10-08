@@ -10,9 +10,12 @@ DATA_STRUCTURES = [
     "Queue",
     "Linked List",
     "Binary Search Tree",
+    "AVL Tree",
     "Heap",
     "Graph"
 ]
+
+SORTING_ALGORITHMS = ["Radix Sort", "Quick Sort", "Merge Sort"]
 
 # ============================================================
 # THEME COLOR PALETTE
@@ -216,7 +219,8 @@ QComboBox QAbstractItemView::item:selected {{
     color: {ACCENT_PRIMARY};
 }}
 QLineEdit {{
-    padding: 8px 12px;
+    padding: 4px 12px;
+    min-height: 24px;
     border: 1px solid {BORDER_LIGHT};
     border-radius: 4px;
     background-color: {BG_SURFACE};
@@ -763,6 +767,22 @@ BST_OPERATIONS = {
 
 BST_OPERATION_NAMES = list(BST_OPERATIONS.keys())
 
+AVL_OPERATIONS = {
+    name: {
+        **info,
+        "description": info["description"].replace("BST", "AVL tree"),
+    }
+    for name, info in BST_OPERATIONS.items()
+}
+for _name in ("Insert", "Delete", "Search"):
+    AVL_OPERATIONS[_name]["time_complexity"] = "O(log n)"
+    AVL_OPERATIONS[_name]["space_complexity"] = "O(log n) recursion stack"
+for _name in ("Find Minimum", "Find Maximum"):
+    AVL_OPERATIONS[_name]["time_complexity"] = "O(log n)"
+AVL_OPERATIONS["Height"]["time_complexity"] = "O(1)"
+AVL_OPERATIONS["Height"]["space_complexity"] = "O(1)"
+AVL_OPERATION_NAMES = list(AVL_OPERATIONS.keys())
+
 HEAP_OPERATIONS = {
     "Insert": {
         "input_type": "value",
@@ -833,6 +853,14 @@ HEAP_OPERATIONS = {
 HEAP_OPERATION_NAMES = list(HEAP_OPERATIONS.keys())
 
 GRAPH_OPERATIONS = {
+    "Adjacency Matrix": {
+        "input_type": "value",
+        "input_label": "Number of Nodes",
+        "placeholder": "Enter node count (1–20)",
+        "description": "Generate an editable adjacency matrix and build an undirected graph from it.",
+        "time_complexity": "O(V²)",
+        "space_complexity": "O(V²)",
+    },
     "Add Vertex": {
         "input_type": "value",
         "input_label": "Vertex",
@@ -955,6 +983,7 @@ DATA_STRUCTURE_OPERATIONS = {
     "Queue": QUEUE_OPERATION_NAMES,
     "Linked List": LINKED_LIST_OPERATION_NAMES,
     "Binary Search Tree": BST_OPERATION_NAMES,
+    "AVL Tree": AVL_OPERATION_NAMES,
     "Heap": HEAP_OPERATION_NAMES,
     "Graph": GRAPH_OPERATION_NAMES,
 }

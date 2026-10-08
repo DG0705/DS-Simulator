@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea,
     QSizePolicy
 )
-from PyQt6.QtCore import Qt, QRect, QTimer
+from PyQt6.QtCore import Qt, QRect, QEasingCurve, QVariantAnimation
 from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush
 
 from app.core.constants import (
@@ -24,7 +24,7 @@ from app.core.constants import (
     SCROLLBAR_HANDLE_HOVER,
 )
 
-DEQUEUE_ANIMATION_MS = 500
+QUEUE_ANIMATION_MS = 800
 
 
 class QueueVisualizer(QWidget):
@@ -59,12 +59,18 @@ class QueueVisualizer(QWidget):
         self._highlight_front = False
         self._highlight_rear = False
         self._new_rear_index = -1
-        self._dequeued_index = -1
-        self._dequeued_value = None
+        self._animation_kind = None
+        self._animation_value = None
+        self._animation_progress = 1.0
+        self._pending_animations = []
         self._operation_feedback = ""
-        self._dequeue_timer = QTimer(self)
-        self._dequeue_timer.setSingleShot(True)
-        self._dequeue_timer.timeout.connect(self._on_dequeue_timer_done)
+        self._animation = QVariantAnimation(self)
+        self._animation.setStartValue(0.0)
+        self._animation.setEndValue(1.0)
+        self._animation.setDuration(QUEUE_ANIMATION_MS)
+        self._animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        self._animation.valueChanged.connect(self._on_animation_frame)
+        self._animation.finished.connect(self._on_animation_finished)
         self._setup_ui()
 
     def _setup_ui(self):
@@ -119,11 +125,14 @@ class QueueVisualizer(QWidget):
         """Set the queue data (expects FRONT -> REAR order from traverse)."""
         self._queue_data = data.copy() if data else []
         if not preserve_highlights:
+            self._animation.stop()
+            self._pending_animations.clear()
             self._highlight_front = False
             self._highlight_rear = False
             self._new_rear_index = -1
-            self._dequeued_index = -1
-            self._dequeued_value = None
+            self._animation_kind = None
+            self._animation_value = None
+            self._animation_progress = 1.0
         self._canvas.updateGeometry()
         self._canvas.update()
 
@@ -137,39 +146,59 @@ class QueueVisualizer(QWidget):
         self._highlight_rear = True
         self._canvas.update()
 
-    def mark_new_rear(self):
-        """Mark the current rear as newly enqueued."""
-        if self._queue_data:
-            self._new_rear_index = len(self._queue_data) - 1
-        self._canvas.update()
+    def animate_enqueue(self, value, final_data):
+        """Animate a value from outside the queue into the rear."""
+        self._queue_animation("enqueue", value, final_data)
 
-    def mark_dequeued(self, value):
-        """Mark the front as dequeued, show animation, then remove after delay."""
-        self._dequeued_index = 0
-        self._dequeued_value = value
-        if self._queue_data:
-            self._queue_data = self._queue_data[1:]
-        self._canvas.updateGeometry()
-        self._canvas.update()
-        if self._dequeue_timer.isActive():
-            self._dequeue_timer.stop()
-        self._dequeue_timer.start(DEQUEUE_ANIMATION_MS)
+    def animate_dequeue(self, value, remaining):
+        """Animate the former front out of the queue."""
+        self._queue_animation("dequeue", value, remaining)
 
-    def _on_dequeue_timer_done(self):
-        """Clear dequeue highlight after animation completes."""
-        self._dequeued_index = -1
-        self._dequeued_value = None
-        self._canvas.update()
+    def _queue_animation(self, kind, value, data):
+        request = (kind, value, list(data))
+        if self._animation_kind is not None:
+            self._pending_animations.append(request)
+            return
+        self._start_animation(*request)
 
-    def clear_highlights(self):
-        """Clear all highlights."""
-        if self._dequeue_timer.isActive():
-            self._dequeue_timer.stop()
+    def _start_animation(self, kind, value, data):
+        self._animation.stop()
+        self._queue_data = list(data)
         self._highlight_front = False
         self._highlight_rear = False
         self._new_rear_index = -1
-        self._dequeued_index = -1
-        self._dequeued_value = None
+        self._animation_kind = kind
+        self._animation_value = value
+        self._animation_progress = 0.0
+        self._canvas.updateGeometry()
+        self._canvas.update()
+        self._animation.start()
+
+    def _on_animation_frame(self, value):
+        self._animation_progress = float(value)
+        self._canvas.update()
+
+    def _on_animation_finished(self):
+        completed_kind = self._animation_kind
+        self._animation_progress = 1.0
+        self._new_rear_index = len(self._queue_data) - 1 if completed_kind == "enqueue" else -1
+        self._animation_kind = None
+        self._animation_value = None
+        self._canvas.updateGeometry()
+        self._canvas.update()
+        if self._pending_animations:
+            self._start_animation(*self._pending_animations.pop(0))
+
+    def clear_highlights(self):
+        """Clear all highlights."""
+        self._animation.stop()
+        self._pending_animations.clear()
+        self._highlight_front = False
+        self._highlight_rear = False
+        self._new_rear_index = -1
+        self._animation_kind = None
+        self._animation_value = None
+        self._animation_progress = 1.0
         self._canvas.update()
 
     def set_feedback(self, message: str):
@@ -184,8 +213,9 @@ class QueueVisualizer(QWidget):
 
     def sizeHint(self):
         from PyQt6.QtCore import QSize
-        n = len(self._queue_data)
-        width = self.MARGIN * 2 + n * (self.CELL_WIDTH + self.CELL_SPACING)
+        n = len(self._queue_data) + (1 if self._animation_kind == "dequeue" else 0)
+        # Leave room beside the cells for the enqueue/dequeue direction labels.
+        width = n * self.CELL_WIDTH + max(0, n - 1) * self.CELL_SPACING + 240
         height = self.LABEL_HEIGHT + self.ARROW_AREA_HEIGHT + self.CELL_HEIGHT + self.LABEL_HEIGHT + self.MARGIN * 2
         return QSize(max(width, 400), max(height, 200))
 
@@ -201,12 +231,8 @@ class _QueueCanvas(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        if not self._visualizer._queue_data and self._visualizer._dequeued_value is None:
+        if not self._visualizer._queue_data and self._visualizer._animation_kind is None:
             self._draw_empty_state(painter)
-            return
-
-        if not self._visualizer._queue_data and self._visualizer._dequeued_value is not None:
-            self._draw_dequeued_only(painter)
             return
 
         self._draw_queue(painter)
@@ -218,33 +244,11 @@ class _QueueCanvas(QWidget):
         painter.setFont(font)
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "Queue is empty\n\nUse Enqueue to add elements")
 
-    def _draw_dequeued_only(self, painter: QPainter):
-        """Draw only the dequeued element (for the case where it was the last element)."""
-        cell_w = self._visualizer.CELL_WIDTH
-        cell_h = self._visualizer.CELL_HEIGHT
-        margin = self._visualizer.MARGIN
-        label_h = self._visualizer.LABEL_HEIGHT
-
-        start_x = (self.width() - cell_w) // 2
-        y = margin + label_h
-        cell_rect = QRect(start_x, y, cell_w, cell_h)
-
-        bg_color = self._visualizer.COLORS["cell_bg_deleted"]
-        border_color = self._visualizer.COLORS["cell_border"]
-        text_color = self._visualizer.COLORS["value_text"]
-
-        painter.setBrush(QBrush(bg_color))
-        painter.setPen(QPen(border_color, 2))
-        painter.drawRoundedRect(cell_rect, 6, 6)
-
-        value_font = QFont("Segoe UI", 16, QFont.Weight.Medium)
-        painter.setFont(value_font)
-        painter.setPen(QPen(text_color))
-        painter.drawText(cell_rect, Qt.AlignmentFlag.AlignCenter, str(self._visualizer._dequeued_value))
-
     def _draw_queue(self, painter: QPainter):
         data = self._visualizer._queue_data
         n = len(data)
+        kind = self._visualizer._animation_kind
+        progress = self._visualizer._animation_progress
 
         cell_w = self._visualizer.CELL_WIDTH
         cell_h = self._visualizer.CELL_HEIGHT
@@ -253,8 +257,11 @@ class _QueueCanvas(QWidget):
         label_h = self._visualizer.LABEL_HEIGHT
         arrow_area = self._visualizer.ARROW_AREA_HEIGHT
 
-        total_width = n * cell_w + (n - 1) * spacing
+        total_width = n * cell_w + max(0, n - 1) * spacing
         start_x = max(margin, (self.width() - total_width) // 2)
+        old_n = n - 1 if kind == "enqueue" else n + 1 if kind == "dequeue" else n
+        old_total_width = old_n * cell_w + max(0, old_n - 1) * spacing
+        old_start_x = max(margin, (self.width() - old_total_width) // 2)
         cell_y = margin + label_h + arrow_area
 
         value_font = QFont("Segoe UI", 16, QFont.Weight.Medium)
@@ -264,50 +271,50 @@ class _QueueCanvas(QWidget):
         front_index = 0
         rear_index = n - 1
 
-        front_x = start_x + front_index * (cell_w + spacing) + cell_w // 2
-        rear_x = start_x + rear_index * (cell_w + spacing) + cell_w // 2
+        front_x = start_x + cell_w // 2
+        rear_x = start_x + max(0, rear_index) * (cell_w + spacing) + cell_w // 2
 
         painter.setFont(label_font)
 
-        painter.setPen(QPen(QColor(ACCENT_PRIMARY)))
-        front_label_rect = QRect(front_x - 50, margin - 4, 100, label_h)
-        painter.drawText(front_label_rect, Qt.AlignmentFlag.AlignCenter, "FRONT")
-
-        painter.setPen(QPen(QColor(ACCENT_SUCCESS)))
-        rear_label_rect = QRect(rear_x - 50, margin - 4, 100, label_h)
-        painter.drawText(rear_label_rect, Qt.AlignmentFlag.AlignCenter, "REAR")
-
-        arrow_y = cell_y - 4
-        painter.setPen(QPen(QColor(TEXT_MUTED), 2))
-        painter.drawLine(margin, arrow_y, start_x + total_width + margin, arrow_y)
-
-        deq_x = start_x - 2
-        painter.drawLine(deq_x, arrow_y - 6, deq_x, arrow_y + 6)
-        painter.drawLine(deq_x, arrow_y - 6, deq_x + 8, arrow_y - 6)
-        painter.drawLine(deq_x, arrow_y + 6, deq_x + 8, arrow_y + 6)
-
-        enq_x = start_x + total_width + 2
-        painter.drawLine(enq_x, arrow_y - 6, enq_x, arrow_y + 6)
-        painter.drawLine(enq_x, arrow_y - 6, enq_x - 8, arrow_y - 6)
-        painter.drawLine(enq_x, arrow_y + 6, enq_x - 8, arrow_y + 6)
+        if n == 1:
+            painter.setPen(QPen(QColor(TEXT_PRIMARY)))
+            painter.drawText(QRect(front_x - 80, margin - 4, 160, label_h),
+                             Qt.AlignmentFlag.AlignCenter, "FRONT / REAR")
+        elif n > 1:
+            painter.setPen(QPen(QColor(ACCENT_PRIMARY)))
+            painter.drawText(QRect(front_x - 50, margin - 4, 100, label_h),
+                             Qt.AlignmentFlag.AlignCenter, "FRONT")
+            painter.setPen(QPen(QColor(ACCENT_SUCCESS)))
+            painter.drawText(QRect(rear_x - 50, margin - 4, 100, label_h),
+                             Qt.AlignmentFlag.AlignCenter, "REAR")
 
         painter.setFont(dir_font)
         painter.setPen(QPen(QColor(TEXT_MUTED)))
 
-        deq_text_rect = QRect(deq_x - 50, arrow_y + 8, 70, 18)
-        painter.drawText(deq_text_rect, Qt.AlignmentFlag.AlignCenter, "DEQUEUE")
-
-        enq_text_rect = QRect(enq_x - 20, arrow_y + 8, 70, 18)
-        painter.drawText(enq_text_rect, Qt.AlignmentFlag.AlignCenter, "ENQUEUE")
+        direction_y = cell_y + (cell_h - 24) // 2
+        painter.drawText(QRect(start_x - 120, direction_y, 110, 24),
+                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+                         "DEQUEUE ←")
+        painter.drawText(QRect(start_x + total_width + 10, direction_y, 110, 24),
+                         Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                         "→ ENQUEUE")
 
         for i, value in enumerate(data):
+            if kind == "enqueue" and i == n - 1:
+                continue
             x = start_x + i * (cell_w + spacing)
+            if kind == "enqueue":
+                old_x = old_start_x + i * (cell_w + spacing)
+                x = round(old_x + (x - old_x) * progress)
+            elif kind == "dequeue":
+                old_x = old_start_x + (i + 1) * (cell_w + spacing)
+                x = round(old_x + (x - old_x) * progress)
             y = cell_y
 
             cell_rect = QRect(x, y, cell_w, cell_h)
 
-            is_front = (i == front_index)
-            is_rear = (i == rear_index)
+            is_front = (i == front_index and kind is None)
+            is_rear = (i == rear_index and kind is None)
             is_highlighted_front = is_front and self._visualizer._highlight_front
             is_highlighted_rear = is_rear and self._visualizer._highlight_rear
             is_new = (i == self._visualizer._new_rear_index)
@@ -338,16 +345,27 @@ class _QueueCanvas(QWidget):
             painter.setPen(QPen(text_color))
             painter.drawText(cell_rect, Qt.AlignmentFlag.AlignCenter, str(value))
 
-        bottom_y = cell_y + cell_h + 8
-        painter.setFont(label_font)
-
-        painter.setPen(QPen(QColor(ACCENT_PRIMARY)))
-        fl = QRect(start_x + front_index * (cell_w + spacing) - 10, bottom_y, cell_w + 20, 20)
-        painter.drawText(fl, Qt.AlignmentFlag.AlignCenter, "FRONT")
-
-        painter.setPen(QPen(QColor(ACCENT_SUCCESS)))
-        rl = QRect(start_x + rear_index * (cell_w + spacing) - 10, bottom_y, cell_w + 20, 20)
-        painter.drawText(rl, Qt.AlignmentFlag.AlignCenter, "REAR")
+        if kind is not None:
+            if kind == "enqueue":
+                target_x = start_x + (n - 1) * (cell_w + spacing)
+                outside_x = target_x + cell_w + 70
+                x = round(outside_x + (target_x - outside_x) * progress)
+                color = self._visualizer.COLORS["cell_bg_new"]
+            else:
+                source_x = old_start_x
+                outside_x = source_x - cell_w - 70
+                x = round(source_x + (outside_x - source_x) * progress)
+                color = self._visualizer.COLORS["cell_bg_deleted"]
+            moving_rect = QRect(x, cell_y, cell_w, cell_h)
+            painter.setBrush(QBrush(color))
+            painter.setPen(QPen(self._visualizer.COLORS["cell_border"], 2))
+            painter.drawRoundedRect(moving_rect, 6, 6)
+            painter.setFont(value_font)
+            painter.setPen(QPen(self._visualizer.COLORS["value_text"]))
+            painter.drawText(
+                moving_rect, Qt.AlignmentFlag.AlignCenter,
+                str(self._visualizer._animation_value),
+            )
 
     def sizeHint(self):
         return self._visualizer.sizeHint()

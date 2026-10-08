@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea,
     QSizePolicy
 )
-from PyQt6.QtCore import Qt, QRect, QTimer
+from PyQt6.QtCore import Qt, QRect, QEasingCurve, QVariantAnimation
 from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush
 
 from app.core.constants import (
@@ -24,7 +24,7 @@ from app.core.constants import (
     SCROLLBAR_HANDLE_HOVER,
 )
 
-POP_ANIMATION_MS = 500
+STACK_ANIMATION_MS = 800
 
 
 class StackVisualizer(QWidget):
@@ -61,12 +61,18 @@ class StackVisualizer(QWidget):
         self._stack_data = []
         self._highlight_top = False
         self._new_index = -1
-        self._popped_index = -1
-        self._popped_value = None
+        self._animation_kind = None
+        self._animation_value = None
+        self._animation_progress = 1.0
+        self._pending_animations = []
         self._operation_feedback = ""
-        self._pop_timer = QTimer(self)
-        self._pop_timer.setSingleShot(True)
-        self._pop_timer.timeout.connect(self._on_pop_timer_done)
+        self._animation = QVariantAnimation(self)
+        self._animation.setStartValue(0.0)
+        self._animation.setEndValue(1.0)
+        self._animation.setDuration(STACK_ANIMATION_MS)
+        self._animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        self._animation.valueChanged.connect(self._on_animation_frame)
+        self._animation.finished.connect(self._on_animation_finished)
         self._setup_ui()
 
     def _setup_ui(self):
@@ -121,10 +127,13 @@ class StackVisualizer(QWidget):
         """Set the stack data (expects TOP -> BOTTOM order from traverse)."""
         self._stack_data = data.copy() if data else []
         if not preserve_highlights:
+            self._animation.stop()
+            self._pending_animations.clear()
             self._highlight_top = False
             self._new_index = -1
-            self._popped_index = -1
-            self._popped_value = None
+            self._animation_kind = None
+            self._animation_value = None
+            self._animation_progress = 1.0
         self._canvas.updateGeometry()
         self._canvas.update()
 
@@ -133,38 +142,58 @@ class StackVisualizer(QWidget):
         self._highlight_top = True
         self._canvas.update()
 
-    def mark_new_top(self):
-        """Mark the current top as newly pushed."""
-        self._new_index = 0
-        self._canvas.update()
+    def animate_push(self, value, final_data):
+        """Animate a value from outside the stack into its new top position."""
+        self._queue_animation("push", value, final_data)
 
-    def mark_popped(self, value):
-        """Mark the top as popped, show animation, then remove after delay."""
-        self._popped_index = 0
-        self._popped_value = value
-        self._stack_data = [v for v in self._stack_data if v is not self._popped_value]
-        if not self._stack_data:
-            self._stack_data = []
+    def animate_pop(self, value, remaining):
+        """Animate the former top away while the remaining cells move upward."""
+        self._queue_animation("pop", value, remaining)
+
+    def _queue_animation(self, kind, value, data):
+        request = (kind, value, list(data))
+        if self._animation_kind is not None:
+            self._pending_animations.append(request)
+            return
+        self._start_animation(*request)
+
+    def _start_animation(self, kind, value, data):
+        self._animation.stop()
+        self._stack_data = list(data)
+        self._highlight_top = False
+        self._new_index = -1
+        self._animation_kind = kind
+        self._animation_value = value
+        self._animation_progress = 0.0
         self._canvas.updateGeometry()
         self._canvas.update()
-        if self._pop_timer.isActive():
-            self._pop_timer.stop()
-        self._pop_timer.start(POP_ANIMATION_MS)
+        self._animation.start()
 
-    def _on_pop_timer_done(self):
-        """Clear pop highlight after animation completes."""
-        self._popped_index = -1
-        self._popped_value = None
+    def _on_animation_frame(self, value):
+        self._animation_progress = float(value)
         self._canvas.update()
+
+    def _on_animation_finished(self):
+        completed_kind = self._animation_kind
+        self._animation_progress = 1.0
+        self._new_index = 0 if completed_kind == "push" else -1
+        self._animation_kind = None
+        self._animation_value = None
+        self._canvas.updateGeometry()
+        self._canvas.update()
+        if self._pending_animations:
+            kind, value, data = self._pending_animations.pop(0)
+            self._start_animation(kind, value, data)
 
     def clear_highlights(self):
         """Clear all highlights."""
-        if self._pop_timer.isActive():
-            self._pop_timer.stop()
+        self._animation.stop()
+        self._pending_animations.clear()
         self._highlight_top = False
         self._new_index = -1
-        self._popped_index = -1
-        self._popped_value = None
+        self._animation_kind = None
+        self._animation_value = None
+        self._animation_progress = 1.0
         self._canvas.update()
 
     def set_feedback(self, message: str):
@@ -196,12 +225,8 @@ class _StackCanvas(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        if not self._visualizer._stack_data and self._visualizer._popped_value is None:
+        if not self._visualizer._stack_data and self._visualizer._animation_kind is None:
             self._draw_empty_state(painter)
-            return
-
-        if not self._visualizer._stack_data and self._visualizer._popped_value is not None:
-            self._draw_popped_only(painter)
             return
 
         self._draw_stack(painter)
@@ -213,40 +238,11 @@ class _StackCanvas(QWidget):
         painter.setFont(font)
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "Stack is empty\n\nUse Push to add elements")
 
-    def _draw_popped_only(self, painter: QPainter):
-        """Draw only the popped element (for the case where it was the last element)."""
-        cell_w = self._visualizer.CELL_WIDTH
-        cell_h = self._visualizer.CELL_HEIGHT
-        margin = self._visualizer.MARGIN
-        top_label_h = self._visualizer.TOP_LABEL_HEIGHT
-
-        start_x = (self.width() - cell_w) // 2
-        y = margin + top_label_h
-        cell_rect = QRect(start_x, y, cell_w, cell_h)
-
-        bg_color = self._visualizer.COLORS["cell_bg_deleted"]
-        border_color = self._visualizer.COLORS["cell_border"]
-        text_color = self._visualizer.COLORS["value_text"]
-
-        painter.setBrush(QBrush(bg_color))
-        painter.setPen(QPen(border_color, 2))
-        painter.drawRoundedRect(cell_rect, 6, 6)
-
-        value_font = QFont("Segoe UI", 16, QFont.Weight.Medium)
-        painter.setFont(value_font)
-        painter.setPen(QPen(text_color))
-        painter.drawText(cell_rect, Qt.AlignmentFlag.AlignCenter, str(self._visualizer._popped_value))
-
-        top_font = QFont("Segoe UI", 12, QFont.Weight.Bold)
-        top_label_y = y - top_label_h
-        painter.setFont(top_font)
-        painter.setPen(QPen(QColor(TEXT_MUTED)))
-        top_rect = QRect(start_x - 40, top_label_y, cell_w + 80, top_label_h)
-        painter.drawText(top_rect, Qt.AlignmentFlag.AlignCenter, "TOP")
-
     def _draw_stack(self, painter: QPainter):
         data = self._visualizer._stack_data
         n = len(data)
+        kind = self._visualizer._animation_kind
+        progress = self._visualizer._animation_progress
 
         cell_w = self._visualizer.CELL_WIDTH
         cell_h = self._visualizer.CELL_HEIGHT
@@ -254,7 +250,8 @@ class _StackCanvas(QWidget):
         margin = self._visualizer.MARGIN
         top_label_h = self._visualizer.TOP_LABEL_HEIGHT
 
-        total_height = n * cell_h + (n - 1) * spacing
+        visible_count = n + (1 if kind == "pop" else 0)
+        total_height = visible_count * cell_h + max(0, visible_count - 1) * spacing
         start_x = (self.width() - cell_w) // 2
         start_y = margin + top_label_h
 
@@ -273,12 +270,18 @@ class _StackCanvas(QWidget):
         painter.drawLine(start_x, line_y, start_x + cell_w, line_y)
 
         for i, value in enumerate(data):
+            if kind == "push" and i == 0:
+                continue
             x = start_x
             y = start_y + i * (cell_h + spacing)
+            if kind == "push":
+                y = round(y - (cell_h + spacing) * (1.0 - progress))
+            elif kind == "pop":
+                y = round(y + (cell_h + spacing) * (1.0 - progress))
 
             cell_rect = QRect(x, y, cell_w, cell_h)
 
-            is_top = (i == 0)
+            is_top = (i == 0 and kind is None)
             is_highlighted = is_top and self._visualizer._highlight_top
             is_new = (i == self._visualizer._new_index)
 
@@ -318,6 +321,35 @@ class _StackCanvas(QWidget):
                 painter.drawLine(arrow_x, arrow_y_start, arrow_x, arrow_y_end)
                 painter.drawLine(arrow_x, arrow_y_end, arrow_x - 5, arrow_y_end - 8)
                 painter.drawLine(arrow_x, arrow_y_end, arrow_x + 5, arrow_y_end - 8)
+
+        if kind is not None:
+            outside_x = min(self.width() - cell_w - 8, start_x + cell_w + 70)
+            outside_y = max(4, start_y - cell_h - 12)
+            if kind == "push":
+                x = round(outside_x + (start_x - outside_x) * progress)
+                y = round(outside_y + (start_y - outside_y) * progress)
+                color = self._visualizer.COLORS["cell_bg_new"]
+            else:
+                x = round(start_x + (outside_x - start_x) * progress)
+                y = round(start_y + (outside_y - start_y) * progress)
+                color = self._visualizer.COLORS["cell_bg_deleted"]
+            moving_rect = QRect(x, y, cell_w, cell_h)
+            painter.setBrush(QBrush(color))
+            painter.setPen(QPen(self._visualizer.COLORS["cell_border"], 2))
+            painter.drawRoundedRect(moving_rect, 6, 6)
+            painter.setFont(value_font)
+            painter.setPen(QPen(self._visualizer.COLORS["value_text"]))
+            painter.drawText(
+                moving_rect, Qt.AlignmentFlag.AlignCenter,
+                str(self._visualizer._animation_value),
+            )
+
+            painter.setFont(top_font)
+            painter.setPen(QPen(QColor(ACCENT_PRIMARY)))
+            painter.drawText(
+                QRect(start_x - 40, start_y - top_label_h, cell_w + 80, top_label_h),
+                Qt.AlignmentFlag.AlignCenter, "TOP",
+            )
 
     def sizeHint(self):
         return self._visualizer.sizeHint()

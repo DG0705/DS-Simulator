@@ -6,8 +6,8 @@ A desktop application for visualizing data structures and algorithms, built as a
 
 The goal of this project is to create an interactive educational tool that helps students visually understand data structures and algorithms through animations and interactive operations. The application will eventually support:
 
-- **Data Structures**: Array, Stack, Queue, Linked List, Binary Search Tree, Heap, Graph
-- **Algorithms**: Sorting (Bubble, Selection, Insertion, Merge, Quick), Searching (Linear, Binary), Graph Algorithms (BFS, DFS, Dijkstra, etc.)
+- **Data Structures**: Array, Stack, Queue, Linked List, Binary Search Tree, AVL Tree, Heap, Graph
+- **Algorithms**: Radix, Quick, and Merge Sort; BFS and DFS. More algorithms are planned.
 
 ## Technology Stack
 
@@ -74,8 +74,19 @@ The goal of this project is to create an interactive educational tool that helps
 - [x] Unit tests (`tests/test_linked_list.py`)
 
 **Upcoming Phases:**
-- [ ] Phase 10: Sorting algorithms
 - [ ] Phase 11: Searching algorithms
+
+**Sorting (COMPLETED):**
+- [x] Radix Sort, Quick Sort, and Merge Sort
+- [x] Comma-separated integer input, including negative values and duplicates
+- [x] Step-by-step sorting snapshots and final result
+
+**AVL Tree (COMPLETED):**
+- [x] Automatic rotations keep the tree balanced after insertion and deletion
+- [x] Insert, Delete, Search, traversals, minimum, maximum, height, size, and clear
+- [x] Tree visualization and comma-separated bulk insertion
+- [x] Step control for comparisons, balance calculations, and rotations
+- [x] Unit tests (`tests/test_avl.py`)
 
 ## Installation
 
@@ -97,6 +108,24 @@ From the project root directory:
 python main.py
 ```
 
+The **Values** field below the regular input accepts comma-separated values such as
+`10, 20, 30`. Click **Add Multiple** to append them to an array, push them onto a
+stack, enqueue them, append them to a linked list, insert them into a BST, AVL tree, or heap,
+or add them as graph vertices. Graph vertices are text; the other structures use
+integers. BST and AVL tree values and graph vertices must be unique. The full list is validated
+before any values are added.
+
+For **AVL Tree**, Execute or Add Multiple prepares the insertion or deletion
+steps. Click **Step** to advance through comparisons, balance-factor calculations,
+and any LL, RR, LR, or RL rotations. The balance factor above each node is
+`height(left) - height(right)`. Orange nodes take part in the rotation. The
+tree update completes after the last step.
+
+To sort numbers, open **Sorting** in the sidebar, choose an algorithm, enter
+comma-separated integers in the lower input field, and click **Execute**. The
+input row stays visible. Click **Step** to reveal the next iteration, or **Skip**
+to reveal every remaining step. The final sorted result appears at the bottom.
+
 ## Running Tests
 
 ```bash
@@ -117,6 +146,9 @@ python -m pytest tests/test_linked_list.py -v
 
 # Run BST tests specifically
 python -m pytest tests/test_bst.py -v
+
+# Run AVL Tree tests specifically
+python -m pytest tests/test_avl.py -v
 
 # Run Heap tests specifically
 python -m pytest tests/test_heap.py -v
@@ -357,7 +389,7 @@ The Binary Search Tree module is the fifth fully functional data structure in th
 - Blue highlight for nodes in search path
 - Green highlight for newly inserted nodes
 - Traversal results displayed in feedback panel
-- Horizontal and vertical scrolling for large trees
+- Tree layout scales to stay within the available window area
 - Operation feedback displayed below visualization
 
 ### Time & Space Complexity
@@ -476,7 +508,7 @@ The Graph module is the seventh functional data structure in the application.
 - Yellow highlight for queued/pending vertices
 - Step-by-step traversal animation with QTimer
 - Empty state message when graph is empty
-- Scrolling for large graphs
+- Graph layout fits the visible panel and resizes with the window
 
 ### BFS (Breadth-First Search)
 
