@@ -15,7 +15,9 @@ DATA_STRUCTURES = [
     "Graph"
 ]
 
-SORTING_ALGORITHMS = ["Radix Sort", "Quick Sort", "Merge Sort"]
+SORTING_ALGORITHMS = [
+    "Radix Sort", "Quick Sort", "Merge Sort", "Insertion Sort", "Selection Sort"
+]
 
 # ============================================================
 # THEME COLOR PALETTE

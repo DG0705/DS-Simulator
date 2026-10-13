@@ -1,7 +1,9 @@
 import random
 import unittest
 
-from algorithms.sorting_algorithms import merge_sort, quick_sort, radix_sort, sorting_trace
+from algorithms.sorting_algorithms import (
+    insertion_sort, merge_sort, quick_sort, radix_sort, selection_sort, sorting_trace,
+)
 
 
 class SortingAlgorithmTests(unittest.TestCase):
@@ -16,7 +18,7 @@ class SortingAlgorithmTests(unittest.TestCase):
             [generator.randint(-10000, 10000) for _ in range(length)]
             for length in (2, 10, 100, 501)
         )
-        for algorithm in (radix_sort, quick_sort, merge_sort):
+        for algorithm in (radix_sort, quick_sort, merge_sort, insertion_sort, selection_sort):
             for sample in samples:
                 with self.subTest(algorithm=algorithm.__name__, sample=sample[:5]):
                     original = sample.copy()
@@ -29,7 +31,7 @@ class SortingAlgorithmTests(unittest.TestCase):
 
     def test_traces_end_with_sorted_snapshot(self):
         values = [43, -5, 8, 3, 8, 0]
-        for name in ("Radix Sort", "Quick Sort", "Merge Sort"):
+        for name in ("Radix Sort", "Quick Sort", "Merge Sort", "Insertion Sort", "Selection Sort"):
             with self.subTest(name=name):
                 steps, result = sorting_trace(name, values)
                 self.assertTrue(steps)
@@ -59,6 +61,19 @@ class SortingAlgorithmTests(unittest.TestCase):
         self.assertTrue(any("pivot" in getattr(snapshot, "pointers", {}) for _, snapshot in steps))
         self.assertTrue(all(getattr(snapshot, "code_line", None) for _, snapshot in steps))
         self.assertEqual(steps[-1][1].code_line, 22)
+
+    def test_insertion_sort_trace_shows_keys_and_shifts(self):
+        steps, result = sorting_trace("Insertion Sort", [5, 2, 4, 1])
+        self.assertEqual(result, [1, 2, 4, 5])
+        self.assertTrue(any("key" in description.lower() for description, _ in steps))
+        self.assertTrue(any("shift" in description.lower() for description, _ in steps))
+        self.assertTrue(any("key" in snapshot.pointers for _, snapshot in steps))
+
+    def test_selection_sort_trace_shows_minimum_search(self):
+        steps, result = sorting_trace("Selection Sort", [5, 2, 4, 1])
+        self.assertEqual(result, [1, 2, 4, 5])
+        self.assertTrue(any("compare" in description.lower() for description, _ in steps))
+        self.assertTrue(any("min" in snapshot.pointers for _, snapshot in steps))
 
 
 if __name__ == "__main__":

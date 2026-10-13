@@ -149,7 +149,7 @@ class SortingVisualizer(QWidget):
             pointer_row = QHBoxLayout()
             pointer_row.setSpacing(6)
             labels_by_index = {}
-            for name in ("i", "j", "pivot"):
+            for name in ("i", "j", "key", "min", "pivot"):
                 index = pointers.get(name)
                 if index is not None and 0 <= index < len(values):
                     labels_by_index.setdefault(index, []).append(name)
