@@ -42,6 +42,81 @@ class PointerSnapshot(list):
         return PointerSnapshot(self, self.pointers, self.compared, self.code_line)
 
 
+def insertion_sort(values, on_step=None):
+    """Return a sorted copy using insertion sort."""
+    result = list(values)
+    if len(result) < 2:
+        if on_step:
+            on_step("The array has fewer than two values, so it is already sorted.", result)
+        return result
+
+    for index in range(1, len(result)):
+        key = result[index]
+        scan = index - 1
+        if on_step:
+            on_step(
+                f"Take {key} at position {index + 1} as the key to insert into the sorted left portion.",
+                PointerSnapshot(result, {"key": index, "j": scan}, {index}),
+            )
+        while scan >= 0 and result[scan] > key:
+            if on_step:
+                on_step(
+                    f"Compare {result[scan]} with key {key}: {result[scan]} is larger, so shift it one position right.",
+                    PointerSnapshot(result, {"j": scan, "key": scan + 1}, {scan, scan + 1}),
+                )
+            result[scan + 1] = result[scan]
+            if on_step:
+                on_step(
+                    f"Shift {result[scan]} from position {scan + 1} to position {scan + 2}.",
+                    PointerSnapshot(result, {"j": scan}, {scan, scan + 1}),
+                )
+            scan -= 1
+        result[scan + 1] = key
+        if on_step:
+            on_step(
+                f"Place key {key} at position {scan + 2}; positions 1–{index + 1} are now sorted.",
+                PointerSnapshot(result, {"key": scan + 1}, {scan + 1}),
+            )
+    return result
+
+
+def selection_sort(values, on_step=None):
+    """Return a sorted copy using selection sort."""
+    result = list(values)
+    if len(result) < 2:
+        if on_step:
+            on_step("The array has fewer than two values, so it is already sorted.", result)
+        return result
+
+    for index in range(len(result) - 1):
+        minimum = index
+        if on_step:
+            on_step(
+                f"Start pass {index + 1}. Assume {result[minimum]} at position {minimum + 1} is the minimum.",
+                PointerSnapshot(result, {"i": index, "min": minimum}, {minimum}),
+            )
+        for scan in range(index + 1, len(result)):
+            if on_step:
+                on_step(
+                    f"Compare {result[scan]} at position {scan + 1} with current minimum {result[minimum]}.",
+                    PointerSnapshot(result, {"i": index, "j": scan, "min": minimum}, {scan, minimum}),
+                )
+            if result[scan] < result[minimum]:
+                minimum = scan
+                if on_step:
+                    on_step(
+                        f"{result[minimum]} is smaller, so position {minimum + 1} becomes the new minimum.",
+                        PointerSnapshot(result, {"i": index, "min": minimum}, {minimum}),
+                    )
+        result[index], result[minimum] = result[minimum], result[index]
+        if on_step:
+            on_step(
+                f"Swap the minimum into position {index + 1}; that position is now final.",
+                PointerSnapshot(result, {"i": index, "min": minimum}, {index, minimum}),
+            )
+    return result
+
+
 def quick_sort(values, on_step=None):
     result = list(values)
     if len(result) < 2:
@@ -243,6 +318,8 @@ SORTING_FUNCTIONS = {
     "Radix Sort": radix_sort,
     "Quick Sort": quick_sort,
     "Merge Sort": merge_sort,
+    "Insertion Sort": insertion_sort,
+    "Selection Sort": selection_sort,
 }
 
 
