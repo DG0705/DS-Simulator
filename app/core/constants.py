@@ -17,7 +17,7 @@ DATA_STRUCTURES = [
 
 SORTING_ALGORITHMS = [
     "Radix Sort", "Quick Sort", "Merge Sort", "Insertion Sort", "Selection Sort",
-    "Bubble Sort", "Heap Sort",
+    "Bubble Sort", "Heap Sort", "Shell Sort", "Cocktail Sort",
 ]
 
 # ============================================================

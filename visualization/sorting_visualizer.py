@@ -11,12 +11,17 @@ from app.core.constants import (
     ACCENT_PRIMARY_LIGHT, ACCENT_SUCCESS_LIGHT, BG_SURFACE,
     BORDER_LIGHT, TEXT_PRIMARY, TEXT_MUTED,
 )
-from algorithms.sorting_algorithms import BUBBLE_SORT_CODE, HEAP_SORT_CODE, QUICK_SORT_CODE
+from algorithms.sorting_algorithms import (
+    BUBBLE_SORT_CODE, COCKTAIL_SORT_CODE, HEAP_SORT_CODE, QUICK_SORT_CODE,
+    SHELL_SORT_CODE,
+)
 
 SORTING_CODE = {
     "Quick Sort": QUICK_SORT_CODE,
     "Bubble Sort": BUBBLE_SORT_CODE,
     "Heap Sort": HEAP_SORT_CODE,
+    "Shell Sort": SHELL_SORT_CODE,
+    "Cocktail Sort": COCKTAIL_SORT_CODE,
 }
 
 
@@ -120,6 +125,8 @@ class SortingVisualizer(QWidget):
             "Quick Sort": 22,
             "Bubble Sort": len(BUBBLE_SORT_CODE),
             "Heap Sort": 6,
+            "Shell Sort": len(SHELL_SORT_CODE),
+            "Cocktail Sort": len(COCKTAIL_SORT_CODE),
         }.get(self.algorithm)
         self._highlight_code_line(final_line)
         self._scroll_to_bottom()

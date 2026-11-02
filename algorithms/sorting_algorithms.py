@@ -62,6 +62,36 @@ HEAP_SORT_CODE = (
     "        root = child",
 )
 
+SHELL_SORT_CODE = (
+    "def shell_sort(a):",
+    "    gap = len(a) // 2",
+    "    while gap > 0:",
+    "        for i in range(gap, len(a)):",
+    "            value = a[i]",
+    "            j = i",
+    "            while j >= gap and a[j - gap] > value:",
+    "                a[j] = a[j - gap]",
+    "                j -= gap",
+    "            a[j] = value",
+    "        gap //= 2",
+    "    return a",
+)
+
+COCKTAIL_SORT_CODE = (
+    "def cocktail_sort(a):",
+    "    start, end = 0, len(a) - 1",
+    "    while start < end:",
+    "        for i in range(start, end):",
+    "            if a[i] > a[i + 1]:",
+    "                a[i], a[i + 1] = a[i + 1], a[i]",
+    "        end -= 1",
+    "        for i in range(end, start, -1):",
+    "            if a[i - 1] > a[i]:",
+    "                a[i - 1], a[i] = a[i], a[i - 1]",
+    "        start += 1",
+    "    return a",
+)
+
 
 class PointerSnapshot(list):
     """Array snapshot with pointer positions for the sorting visualizer."""
@@ -234,6 +264,74 @@ def heap_sort(values, on_step=None):
         sift_down(0, end)
     if on_step:
         on_step("Heap is empty; return the sorted array.", PointerSnapshot(result, code_line=6))
+    return result
+
+
+def shell_sort(values, on_step=None):
+    """Return a sorted copy using Shell's diminishing-gap insertion sort."""
+    result = list(values)
+    gap = len(result) // 2
+    if len(result) < 2 and on_step:
+        on_step("The array has fewer than two values, so it is already sorted.", PointerSnapshot(result, code_line=12))
+    while gap > 0:
+        for index in range(gap, len(result)):
+            value = result[index]
+            scan = index
+            while scan >= gap and result[scan - gap] > value:
+                if on_step:
+                    on_step(
+                        f"Compare {result[scan - gap]} with {value} using gap {gap}; shift the larger value right.",
+                        PointerSnapshot(result, {"i": scan, "j": scan - gap}, {scan, scan - gap}, 7),
+                    )
+                result[scan] = result[scan - gap]
+                if on_step:
+                    on_step("Shift the value across the current gap.", PointerSnapshot(result, {"i": scan, "j": scan - gap}, {scan, scan - gap}, 8))
+                scan -= gap
+            result[scan] = value
+            if on_step:
+                on_step(
+                    f"Place {value} at position {scan + 1} for gap {gap}.",
+                    PointerSnapshot(result, {"i": index, "key": scan}, {scan}, 10),
+                )
+        gap //= 2
+        if on_step:
+            on_step(f"Reduce the gap to {gap}.", PointerSnapshot(result, code_line=11))
+    return result
+
+
+def cocktail_sort(values, on_step=None):
+    """Return a sorted copy using bidirectional bubble passes."""
+    result = list(values)
+    start, end = 0, len(result) - 1
+    if len(result) < 2 and on_step:
+        on_step("The array has fewer than two values, so it is already sorted.", PointerSnapshot(result, code_line=12))
+    while start < end:
+        swapped = False
+        for index in range(start, end):
+            if on_step:
+                on_step("Compare adjacent values while scanning left to right.", PointerSnapshot(result, {"i": index, "j": index + 1}, {index, index + 1}, 5))
+            if result[index] > result[index + 1]:
+                result[index], result[index + 1] = result[index + 1], result[index]
+                swapped = True
+                if on_step:
+                    on_step("Swap the pair to move the larger value right.", PointerSnapshot(result, {"i": index, "j": index + 1}, {index, index + 1}, 6))
+        end -= 1
+        if not swapped:
+            break
+        swapped = False
+        for index in range(end, start, -1):
+            if on_step:
+                on_step("Compare adjacent values while scanning right to left.", PointerSnapshot(result, {"i": index - 1, "j": index}, {index - 1, index}, 9))
+            if result[index - 1] > result[index]:
+                result[index - 1], result[index] = result[index], result[index - 1]
+                swapped = True
+                if on_step:
+                    on_step("Swap the pair to move the smaller value left.", PointerSnapshot(result, {"i": index - 1, "j": index}, {index - 1, index}, 10))
+        start += 1
+        if not swapped:
+            break
+    if on_step:
+        on_step("Both scan directions are complete; return the sorted array.", PointerSnapshot(result, code_line=12))
     return result
 
 
@@ -442,6 +540,8 @@ SORTING_FUNCTIONS = {
     "Selection Sort": selection_sort,
     "Bubble Sort": bubble_sort,
     "Heap Sort": heap_sort,
+    "Shell Sort": shell_sort,
+    "Cocktail Sort": cocktail_sort,
 }
 
 

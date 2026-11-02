@@ -773,6 +773,8 @@ class MainWindow(QMainWindow):
             "Selection Sort": ("O(n²)", "O(1)"),
             "Bubble Sort": ("O(n²) average and worst, O(n) best", "O(1)"),
             "Heap Sort": ("O(n log n)", "O(1)"),
+            "Shell Sort": ("Depends on gap sequence; typically O(n^1.5)", "O(1)"),
+            "Cocktail Sort": ("O(n²) average and worst, O(n) best", "O(1)"),
         }
         self._update_status(name, *complexity[name])
 
