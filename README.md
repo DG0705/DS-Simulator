@@ -7,7 +7,7 @@ A desktop application for visualizing data structures and algorithms, built as a
 The goal of this project is to create an interactive educational tool that helps students visually understand data structures and algorithms through animations and interactive operations. The application will eventually support:
 
 - **Data Structures**: Array, Stack, Queue, Linked List, Binary Search Tree, AVL Tree, Heap, Graph
-- **Algorithms**: Radix, Quick, and Merge Sort; BFS and DFS. More algorithms are planned.
+- **Algorithms**: Radix, Quick, Merge, Insertion, Selection, Bubble, and Heap Sort; BFS and DFS.
 
 ## Technology Stack
 
@@ -77,7 +77,7 @@ The goal of this project is to create an interactive educational tool that helps
 - [ ] Phase 11: Searching algorithms
 
 **Sorting (COMPLETED):**
-- [x] Radix Sort, Quick Sort, and Merge Sort
+- [x] Radix Sort, Quick Sort, Merge Sort, Insertion Sort, Selection Sort, Bubble Sort, and Heap Sort
 - [x] Comma-separated integer input, including negative values and duplicates
 - [x] Step-by-step sorting snapshots and final result
 

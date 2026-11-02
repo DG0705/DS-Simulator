@@ -28,6 +28,40 @@ QUICK_SORT_CODE = (
     "    return a",
 )
 
+BUBBLE_SORT_CODE = (
+    "def bubble_sort(a):",
+    "    for end in range(len(a) - 1, 0, -1):",
+    "        swapped = False",
+    "        for i in range(end):",
+    "            if a[i] > a[i + 1]:",
+    "                a[i], a[i + 1] = a[i + 1], a[i]",
+    "                swapped = True",
+    "        if not swapped:",
+    "            break",
+    "    return a",
+)
+
+HEAP_SORT_CODE = (
+    "def heap_sort(a):",
+    "    build_max_heap(a)",
+    "    for end in range(len(a) - 1, 0, -1):",
+    "        a[0], a[end] = a[end], a[0]",
+    "        sift_down(a, 0, end)",
+    "    return a",
+    "",
+    "def sift_down(a, root, end):",
+    "    while True:",
+    "        child = 2 * root + 1",
+    "        if child >= end:",
+    "            return",
+    "        if child + 1 < end and a[child] < a[child + 1]:",
+    "            child += 1",
+    "        if a[root] >= a[child]:",
+    "            return",
+    "        a[root], a[child] = a[child], a[root]",
+    "        root = child",
+)
+
 
 class PointerSnapshot(list):
     """Array snapshot with pointer positions for the sorting visualizer."""
@@ -114,6 +148,92 @@ def selection_sort(values, on_step=None):
                 f"Swap the minimum into position {index + 1}; that position is now final.",
                 PointerSnapshot(result, {"i": index, "min": minimum}, {index, minimum}),
             )
+    return result
+
+
+def bubble_sort(values, on_step=None):
+    """Return a sorted copy using stable bubble sort."""
+    result = list(values)
+    length = len(result)
+    if length < 2:
+        if on_step:
+            on_step("The array has fewer than two values, so it is already sorted.", PointerSnapshot(result, code_line=10))
+        return result
+
+    for end in range(length - 1, 0, -1):
+        swapped = False
+        for index in range(end):
+            if on_step:
+                on_step(
+                    f"Compare positions {index + 1} and {index + 2}.",
+                    PointerSnapshot(result, {"i": index, "j": index + 1}, {index, index + 1}, 5),
+                )
+            if result[index] > result[index + 1]:
+                result[index], result[index + 1] = result[index + 1], result[index]
+                swapped = True
+                if on_step:
+                    on_step(
+                        f"Swap the out-of-order values; {result[index + 1]} moves right.",
+                        PointerSnapshot(result, {"i": index, "j": index + 1}, {index, index + 1}, 6),
+                    )
+        if on_step:
+            on_step(
+                f"Pass complete; position {end + 1} now contains its final value.",
+                PointerSnapshot(result, {"sorted": end}, code_line=2),
+            )
+        if not swapped:
+            if on_step:
+                on_step("No swaps were needed, so the array is sorted.", PointerSnapshot(result, code_line=9))
+            break
+    return result
+
+
+def heap_sort(values, on_step=None):
+    """Return a sorted copy using in-place max-heap sort."""
+    result = list(values)
+    length = len(result)
+    if length < 2:
+        if on_step:
+            on_step("The array has fewer than two values, so it is already sorted.", PointerSnapshot(result, code_line=6))
+        return result
+
+    def sift_down(root, end):
+        while True:
+            child = 2 * root + 1
+            if child >= end:
+                return
+            if child + 1 < end and result[child] < result[child + 1]:
+                child += 1
+            if on_step:
+                on_step(
+                    f"Compare parent at position {root + 1} with larger child at position {child + 1}.",
+                    PointerSnapshot(result, {"parent": root, "child": child}, {root, child}, 15),
+                )
+            if result[root] >= result[child]:
+                return
+            result[root], result[child] = result[child], result[root]
+            if on_step:
+                on_step(
+                    "Swap to restore the max heap.",
+                    PointerSnapshot(result, {"parent": root, "child": child}, {root, child}, 17),
+                )
+            root = child
+
+    for root in range(length // 2 - 1, -1, -1):
+        sift_down(root, length)
+    if on_step:
+        on_step("Max heap built; repeatedly move its maximum to the sorted suffix.", PointerSnapshot(result, code_line=2))
+
+    for end in range(length - 1, 0, -1):
+        result[0], result[end] = result[end], result[0]
+        if on_step:
+            on_step(
+                f"Move the maximum to final position {end + 1}.",
+                PointerSnapshot(result, {"root": 0, "sorted": end}, {0, end}, 4),
+            )
+        sift_down(0, end)
+    if on_step:
+        on_step("Heap is empty; return the sorted array.", PointerSnapshot(result, code_line=6))
     return result
 
 
@@ -320,6 +440,8 @@ SORTING_FUNCTIONS = {
     "Merge Sort": merge_sort,
     "Insertion Sort": insertion_sort,
     "Selection Sort": selection_sort,
+    "Bubble Sort": bubble_sort,
+    "Heap Sort": heap_sort,
 }
 
 

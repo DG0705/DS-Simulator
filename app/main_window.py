@@ -771,6 +771,8 @@ class MainWindow(QMainWindow):
             "Merge Sort": ("O(n log n)", "O(n)"),
             "Insertion Sort": ("O(n²) average and worst, O(n) best", "O(1)"),
             "Selection Sort": ("O(n²)", "O(1)"),
+            "Bubble Sort": ("O(n²) average and worst, O(n) best", "O(1)"),
+            "Heap Sort": ("O(n log n)", "O(1)"),
         }
         self._update_status(name, *complexity[name])
 

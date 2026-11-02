@@ -11,7 +11,13 @@ from app.core.constants import (
     ACCENT_PRIMARY_LIGHT, ACCENT_SUCCESS_LIGHT, BG_SURFACE,
     BORDER_LIGHT, TEXT_PRIMARY, TEXT_MUTED,
 )
-from algorithms.sorting_algorithms import QUICK_SORT_CODE
+from algorithms.sorting_algorithms import BUBBLE_SORT_CODE, HEAP_SORT_CODE, QUICK_SORT_CODE
+
+SORTING_CODE = {
+    "Quick Sort": QUICK_SORT_CODE,
+    "Bubble Sort": BUBBLE_SORT_CODE,
+    "Heap Sort": HEAP_SORT_CODE,
+}
 
 
 class SortingVisualizer(QWidget):
@@ -42,23 +48,23 @@ class SortingVisualizer(QWidget):
         self._rows.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._scroll.setWidget(self._content)
 
-        if algorithm == "Quick Sort":
+        if algorithm in SORTING_CODE:
             splitter = QSplitter(Qt.Orientation.Horizontal)
             splitter.addWidget(self._scroll)
             code_panel = QFrame()
             code_panel.setStyleSheet(
                 f"QFrame {{ background: #111827; border: 1px solid {BORDER_LIGHT}; "
-                "border-radius: 6px; }}"
+                f"border-radius: 6px; }}"
             )
             code_layout = QVBoxLayout(code_panel)
-            code_title = QLabel("Quick Sort Python Code")
+            code_title = QLabel(f"{algorithm} Python Code")
             code_title.setStyleSheet("color: white; font-size: 14px; font-weight: 600;")
             code_layout.addWidget(code_title)
             self._code_view = QPlainTextEdit()
             self._code_view.setReadOnly(True)
             self._code_view.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
             self._code_view.setFont(QFont("Consolas", 10))
-            self._code_view.setPlainText("\n".join(QUICK_SORT_CODE))
+            self._code_view.setPlainText("\n".join(SORTING_CODE[algorithm]))
             self._code_view.setStyleSheet(
                 "QPlainTextEdit { background: #111827; color: #E5E7EB; "
                 "border: none; padding: 8px; selection-background-color: #F59E0B; }"
@@ -95,7 +101,7 @@ class SortingVisualizer(QWidget):
         self.step_button.setEnabled(step_count > 0)
         self.skip_button.setEnabled(step_count > 0)
         self._scroll.verticalScrollBar().setValue(0)
-        self._highlight_code_line(2 if self.algorithm == "Quick Sort" else None)
+        self._highlight_code_line(2 if self.algorithm == "Quick Sort" else 1 if self.algorithm in SORTING_CODE else None)
 
     def add_step(self, number, description, values, total):
         self.displayed_steps.append((description, list(values)))
@@ -110,7 +116,12 @@ class SortingVisualizer(QWidget):
         self.progress_label.setText(f"Completed {len(self.displayed_steps)} steps")
         self.step_button.setEnabled(False)
         self.skip_button.setEnabled(False)
-        self._highlight_code_line(22 if self.algorithm == "Quick Sort" else None)
+        final_line = {
+            "Quick Sort": 22,
+            "Bubble Sort": len(BUBBLE_SORT_CODE),
+            "Heap Sort": 6,
+        }.get(self.algorithm)
+        self._highlight_code_line(final_line)
         self._scroll_to_bottom()
 
     def _highlight_code_line(self, line_number):
@@ -132,8 +143,7 @@ class SortingVisualizer(QWidget):
         row = QFrame()
         row.setStyleSheet(
             f"QFrame {{ background-color: {background}; border: 1px solid {BORDER_LIGHT}; "
-            "border-radius: 6px; }}"
-            "QLabel { border: none; background: transparent; }"
+            f"border-radius: 6px; }} QLabel {{ border: none; background: transparent; }}"
         )
         column = QVBoxLayout(row)
         column.setContentsMargins(12, 8, 12, 10)
@@ -149,7 +159,7 @@ class SortingVisualizer(QWidget):
             pointer_row = QHBoxLayout()
             pointer_row.setSpacing(6)
             labels_by_index = {}
-            for name in ("i", "j", "key", "min", "pivot"):
+            for name in ("i", "j", "key", "min", "pivot", "parent", "child"):
                 index = pointers.get(name)
                 if index is not None and 0 <= index < len(values):
                     labels_by_index.setdefault(index, []).append(name)
