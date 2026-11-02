@@ -34,7 +34,8 @@ from app.core.constants import (
     GRAPH_OPERATIONS,
     GRAPH_OPERATION_NAMES,
     DATA_STRUCTURE_OPERATIONS,
-    SORTING_ALGORITHMS,
+    SEARCHING_ALGORITHMS,
+    ALGORITHM_VIEWS,
 )
 from app.ui.sidebar import Sidebar
 from app.ui.visualization_panel import VisualizationPanel
@@ -52,6 +53,7 @@ from data_structures.heap import MaxHeap, HeapError, HeapEmptyError, HeapValueEr
 from data_structures.graph import UndirectedGraph, GraphError, GraphEmptyError, GraphVertexError, GraphEdgeError, GraphValueError
 from algorithms.graph_algorithms import bfs, dfs
 from algorithms.sorting_algorithms import sorting_trace
+from algorithms.searching_algorithms import searching_trace
 from visualization.array_visualizer import ArrayVisualizer
 from visualization.stack_visualizer import StackVisualizer
 from visualization.queue_visualizer import QueueVisualizer
@@ -89,6 +91,7 @@ class MainWindow(QMainWindow):
         self._sorting_visualizer = None
         self._sorting_steps = []
         self._sorting_result = []
+        self._search_result_title = None
         self._sorting_step_index = 0
         self._traversal_timer = QTimer()
         self._traversal_timer.setInterval(600)
@@ -238,8 +241,8 @@ class MainWindow(QMainWindow):
         previous_name = self._current_data_structure
         self._current_data_structure = name
         self._variable_context = {}
-        self._right_panel.setVisible(name not in SORTING_ALGORITHMS)
-        if name not in SORTING_ALGORITHMS or previous_name not in SORTING_ALGORITHMS:
+        self._right_panel.setVisible(name not in ALGORITHM_VIEWS)
+        if name not in ALGORITHM_VIEWS or previous_name not in ALGORITHM_VIEWS:
             self._bulk_input.clear()
 
         if name == "Array":
@@ -258,9 +261,9 @@ class MainWindow(QMainWindow):
             self._setup_heap()
         elif name == "Graph":
             self._setup_graph()
-        elif name in SORTING_ALGORITHMS:
+        elif name in ALGORITHM_VIEWS:
             self._setup_sorting(name)
-        if name not in SORTING_ALGORITHMS:
+        if name not in ALGORITHM_VIEWS:
             self._refresh_variable_panel()
         else:
             self._visualization_panel.set_data_structure(name)
@@ -272,6 +275,22 @@ class MainWindow(QMainWindow):
             self._value_group.setTitle(VALUE_LABEL)
             self._value_input.setPlaceholderText("Enter value")
             self._operation_description.setText("")
+            if name in SEARCHING_ALGORITHMS:
+                self._operation_combo.clear()
+                self._operation_combo.addItem(name)
+                self._operation_combo.setEnabled(False)
+                self._value_group.setTitle("Target")
+                self._value_input.setPlaceholderText("Enter target value")
+                self._value_input.setEnabled(True)
+                self._bulk_input.setPlaceholderText(
+                    "Sorted values, e.g. -3, 0, 5, 8"
+                    if name == "Binary Search" else "Values, e.g. 8, -3, 5, 8, 0"
+                )
+                self._bulk_button.hide()
+                self._bulk_button.setEnabled(False)
+                self._operation_description.setText(
+                    "Enter integer values and a target. Binary Search requires ascending order."
+                )
 
     def _setup_sorting(self, name):
         center_widget = self._visualization_panel.parent()
@@ -287,17 +306,21 @@ class MainWindow(QMainWindow):
         self._operation_combo.clear()
         self._operation_combo.addItem(name)
         self._operation_combo.setEnabled(False)
-        self._value_group.setTitle("Numbers")
+        searching = name in SEARCHING_ALGORITHMS
+        self._value_group.setTitle("Target" if searching else "Numbers")
         self._value_input.clear()
-        self._value_input.setEnabled(False)
-        self._value_input.setPlaceholderText("Use the comma-separated field below")
-        self._bulk_input.setPlaceholderText("e.g. 8, -3, 5, 8, 0")
+        self._value_input.setEnabled(searching)
+        self._value_input.setPlaceholderText("Enter target value" if searching else "Use the comma-separated field below")
+        self._bulk_input.setPlaceholderText("Sorted values, e.g. -3, 0, 5, 8" if name == "Binary Search" else "e.g. 8, -3, 5, 8, 0")
         self._bulk_input.setEnabled(True)
         self._bulk_button.hide()
         self._bulk_button.setEnabled(False)
         self._execute_button.setEnabled(True)
         self._reset_button.setEnabled(True)
-        self._operation_description.setText("Enter integers below, then click Execute to sort.")
+        self._operation_description.setText(
+            "Enter integer values and a target, then click Execute to search. Binary Search requires ascending order."
+            if searching else "Enter integers below, then click Execute to sort."
+        )
 
     def _setup_array(self):
         self._array = Array()
@@ -590,7 +613,7 @@ class MainWindow(QMainWindow):
         self._value_group.setTitle(input_label)
         self._value_input.setPlaceholderText(placeholder)
         self._operation_description.setText(description)
-        if self._current_data_structure not in SORTING_ALGORITHMS:
+        if self._current_data_structure not in ALGORITHM_VIEWS:
             self._code_panel.show_operation(self._current_data_structure, operation)
             self._variable_context = {"operation": operation}
             self._refresh_variable_panel()
@@ -614,8 +637,11 @@ class MainWindow(QMainWindow):
         if not self._current_data_structure:
             return
 
-        if self._current_data_structure in SORTING_ALGORITHMS:
-            self._on_sort_numbers()
+        if self._current_data_structure in ALGORITHM_VIEWS:
+            if self._current_data_structure in SEARCHING_ALGORITHMS:
+                self._on_search_numbers()
+            else:
+                self._on_sort_numbers()
             return
 
         operation = self._operation_combo.currentText()
@@ -640,7 +666,7 @@ class MainWindow(QMainWindow):
             self._execute_heap_operation(operation, value_text)
         elif self._current_data_structure == "Graph":
             self._execute_graph_operation(operation, value_text)
-        if self._current_data_structure not in SORTING_ALGORITHMS:
+        if self._current_data_structure not in ALGORITHM_VIEWS:
             self._code_panel.highlight_execution()
             self._refresh_variable_panel()
 
@@ -751,6 +777,7 @@ class MainWindow(QMainWindow):
         self._refresh_variable_panel()
 
     def _on_sort_numbers(self):
+        self._search_result_title = None
         parts = [part.strip() for part in self._bulk_input.text().split(",")]
         if not parts or any(not part for part in parts):
             self._show_error("Enter integers separated by commas (e.g. 8, -3, 5).")
@@ -778,6 +805,37 @@ class MainWindow(QMainWindow):
         }
         self._update_status(name, *complexity[name])
 
+    def _on_search_numbers(self):
+        parts = [part.strip() for part in self._bulk_input.text().split(",")]
+        if not parts or any(not part for part in parts):
+            self._show_error("Enter integers separated by commas (e.g. 2, 5, 8, 12).")
+            return
+        try:
+            values = [int(part) for part in parts]
+            target = int(self._value_input.text().strip())
+        except ValueError:
+            self._show_error("Searching requires an integer target and comma-separated integer values.")
+            return
+
+        name = self._current_data_structure
+        try:
+            self._sorting_steps, result = searching_trace(name, values, target)
+        except ValueError as error:
+            self._show_error(str(error))
+            return
+        self._sorting_step_index = 0
+        self._sorting_result = self._sorting_steps[-1][1] if self._sorting_steps else values
+        self._search_result_title = (
+            f"Found {target} at index {result} (position {result + 1})"
+            if result >= 0 else f"{target} was not found"
+        )
+        self._sorting_visualizer.start(values, len(self._sorting_steps))
+        complexity = {
+            "Linear Search": ("O(n)", "O(1)"),
+            "Binary Search": ("O(log n)", "O(1)"),
+        }
+        self._update_status(name, *complexity[name])
+
     def _on_sort_step(self):
         if self._sorting_visualizer is None or self._sorting_step_index >= len(self._sorting_steps):
             return
@@ -787,7 +845,8 @@ class MainWindow(QMainWindow):
             self._sorting_step_index, description, snapshot, len(self._sorting_steps)
         )
         if self._sorting_step_index == len(self._sorting_steps):
-            self._sorting_visualizer.show_final(self._sorting_result)
+            title = self._search_result_title or "Final sorted result"
+            self._sorting_visualizer.show_final(self._sorting_result, title)
 
     def _on_sort_skip(self):
         while self._sorting_step_index < len(self._sorting_steps):
@@ -2085,7 +2144,7 @@ class MainWindow(QMainWindow):
     def _refresh_variable_panel(self):
         """Refresh the live variables shown for the selected data structure."""
         name = self._current_data_structure
-        if not name or name in SORTING_ALGORITHMS or not hasattr(self, "_variable_panel"):
+        if not name or name in ALGORITHM_VIEWS or not hasattr(self, "_variable_panel"):
             return
         variables = dict(self._variable_context)
         if name == "Array" and self._array is not None:
@@ -2148,6 +2207,7 @@ class MainWindow(QMainWindow):
         QMessageBox.warning(self, "Error", message)
 
     def _on_reset(self):
+        self._search_result_title = None
         self._stop_traversal()
         center_widget = self._visualization_panel.parent()
         if center_widget:
