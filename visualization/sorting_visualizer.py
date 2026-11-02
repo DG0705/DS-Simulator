@@ -15,7 +15,10 @@ from algorithms.sorting_algorithms import (
     BUBBLE_SORT_CODE, COCKTAIL_SORT_CODE, HEAP_SORT_CODE, QUICK_SORT_CODE,
     SHELL_SORT_CODE,
 )
-from algorithms.searching_algorithms import BINARY_SEARCH_CODE, LINEAR_SEARCH_CODE
+from algorithms.searching_algorithms import (
+    BINARY_SEARCH_CODE, EXPONENTIAL_SEARCH_CODE, INTERPOLATION_SEARCH_CODE,
+    JUMP_SEARCH_CODE, LINEAR_SEARCH_CODE,
+)
 
 SORTING_CODE = {
     "Quick Sort": QUICK_SORT_CODE,
@@ -25,6 +28,9 @@ SORTING_CODE = {
     "Cocktail Sort": COCKTAIL_SORT_CODE,
     "Linear Search": LINEAR_SEARCH_CODE,
     "Binary Search": BINARY_SEARCH_CODE,
+    "Jump Search": JUMP_SEARCH_CODE,
+    "Interpolation Search": INTERPOLATION_SEARCH_CODE,
+    "Exponential Search": EXPONENTIAL_SEARCH_CODE,
 }
 
 
@@ -132,6 +138,9 @@ class SortingVisualizer(QWidget):
             "Cocktail Sort": len(COCKTAIL_SORT_CODE),
             "Linear Search": len(LINEAR_SEARCH_CODE),
             "Binary Search": len(BINARY_SEARCH_CODE),
+            "Jump Search": len(JUMP_SEARCH_CODE),
+            "Interpolation Search": len(INTERPOLATION_SEARCH_CODE),
+            "Exponential Search": len(EXPONENTIAL_SEARCH_CODE),
         }.get(self.algorithm)
         self._highlight_code_line(final_line)
         self._scroll_to_bottom()
@@ -172,7 +181,10 @@ class SortingVisualizer(QWidget):
             pointer_row = QHBoxLayout()
             pointer_row.setSpacing(6)
             labels_by_index = {}
-            for name in ("i", "j", "key", "min", "pivot", "parent", "child", "low", "mid", "high"):
+            for name in (
+                "i", "j", "key", "min", "pivot", "parent", "child",
+                "low", "mid", "high", "start", "end",
+            ):
                 index = pointers.get(name)
                 if index is not None and 0 <= index < len(values):
                     labels_by_index.setdefault(index, []).append(name)
