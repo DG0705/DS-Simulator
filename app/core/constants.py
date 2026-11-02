@@ -20,6 +20,9 @@ SORTING_ALGORITHMS = [
     "Bubble Sort", "Heap Sort", "Shell Sort", "Cocktail Sort",
 ]
 
+SEARCHING_ALGORITHMS = ["Linear Search", "Binary Search"]
+ALGORITHM_VIEWS = SORTING_ALGORITHMS + SEARCHING_ALGORITHMS
+
 # ============================================================
 # THEME COLOR PALETTE
 # ============================================================

@@ -7,6 +7,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from app.core.constants import (
     DATA_STRUCTURES,
     SORTING_ALGORITHMS,
+    SEARCHING_ALGORITHMS,
     PLACEHOLDER_BUTTON_STYLE,
     SIDEBAR_STYLE,
     DATA_STRUCTURES_SECTION_TITLE,
@@ -77,6 +78,23 @@ class Sidebar(QWidget):
         self._sorting_menu.hide()
         scroll_layout.addWidget(self._sorting_menu)
 
+        self._searching_toggle = QPushButton("Searching  ▸")
+        self._searching_toggle.setCheckable(True)
+        self._searching_toggle.setStyleSheet(ENABLED_BUTTON_STYLE)
+        self._searching_toggle.clicked.connect(self._toggle_searching)
+        scroll_layout.addWidget(self._searching_toggle)
+
+        self._searching_menu = QWidget()
+        searching_layout = QVBoxLayout(self._searching_menu)
+        searching_layout.setContentsMargins(16, 0, 0, 0)
+        searching_layout.setSpacing(8)
+        for name in SEARCHING_ALGORITHMS:
+            button = self._create_enabled_button(name)
+            self._buttons[name] = button
+            searching_layout.addWidget(button)
+        self._searching_menu.hide()
+        scroll_layout.addWidget(self._searching_menu)
+
         scroll_layout.addSpacerItem(
             QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         )
@@ -118,3 +136,7 @@ class Sidebar(QWidget):
     def _toggle_sorting(self, checked):
         self._sorting_menu.setVisible(checked)
         self._sorting_toggle.setText("Sorting  ▾" if checked else "Sorting  ▸")
+
+    def _toggle_searching(self, checked):
+        self._searching_menu.setVisible(checked)
+        self._searching_toggle.setText("Searching  ▾" if checked else "Searching  ▸")

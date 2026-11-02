@@ -15,6 +15,7 @@ from algorithms.sorting_algorithms import (
     BUBBLE_SORT_CODE, COCKTAIL_SORT_CODE, HEAP_SORT_CODE, QUICK_SORT_CODE,
     SHELL_SORT_CODE,
 )
+from algorithms.searching_algorithms import BINARY_SEARCH_CODE, LINEAR_SEARCH_CODE
 
 SORTING_CODE = {
     "Quick Sort": QUICK_SORT_CODE,
@@ -22,6 +23,8 @@ SORTING_CODE = {
     "Heap Sort": HEAP_SORT_CODE,
     "Shell Sort": SHELL_SORT_CODE,
     "Cocktail Sort": COCKTAIL_SORT_CODE,
+    "Linear Search": LINEAR_SEARCH_CODE,
+    "Binary Search": BINARY_SEARCH_CODE,
 }
 
 
@@ -115,9 +118,9 @@ class SortingVisualizer(QWidget):
         self.progress_label.setText(f"{number} of {total} steps shown")
         self._scroll_to_bottom()
 
-    def show_final(self, values):
+    def show_final(self, values, title="Final sorted result"):
         self.final_values = list(values)
-        self._add_row("Final sorted result", values, ACCENT_SUCCESS_LIGHT)
+        self._add_row(title, values, ACCENT_SUCCESS_LIGHT)
         self.progress_label.setText(f"Completed {len(self.displayed_steps)} steps")
         self.step_button.setEnabled(False)
         self.skip_button.setEnabled(False)
@@ -127,6 +130,8 @@ class SortingVisualizer(QWidget):
             "Heap Sort": 6,
             "Shell Sort": len(SHELL_SORT_CODE),
             "Cocktail Sort": len(COCKTAIL_SORT_CODE),
+            "Linear Search": len(LINEAR_SEARCH_CODE),
+            "Binary Search": len(BINARY_SEARCH_CODE),
         }.get(self.algorithm)
         self._highlight_code_line(final_line)
         self._scroll_to_bottom()
@@ -162,11 +167,12 @@ class SortingVisualizer(QWidget):
 
         pointers = getattr(values, "pointers", {})
         compared = getattr(values, "compared", set())
+        matched = getattr(values, "matched", None)
         if pointers:
             pointer_row = QHBoxLayout()
             pointer_row.setSpacing(6)
             labels_by_index = {}
-            for name in ("i", "j", "key", "min", "pivot", "parent", "child"):
+            for name in ("i", "j", "key", "min", "pivot", "parent", "child", "low", "mid", "high"):
                 index = pointers.get(name)
                 if index is not None and 0 <= index < len(values):
                     labels_by_index.setdefault(index, []).append(name)
@@ -189,10 +195,11 @@ class SortingVisualizer(QWidget):
             cell = QLabel("·" if value is None else str(value))
             cell.setAlignment(Qt.AlignmentFlag.AlignCenter)
             cell.setFixedSize(self.CELL_WIDTH, 42)
-            border_color = "#D97706" if index in compared else BORDER_LIGHT
-            border_width = 2 if index in compared else 1
+            border_color = "#15803D" if index == matched else "#D97706" if index in compared else BORDER_LIGHT
+            border_width = 2 if index == matched or index in compared else 1
+            cell_background = ACCENT_SUCCESS_LIGHT if index == matched else "white"
             cell.setStyleSheet(
-                f"background: white; color: {TEXT_PRIMARY}; "
+                f"background: {cell_background}; color: {TEXT_PRIMARY}; "
                 f"border: {border_width}px solid {border_color}; border-radius: 5px; font-size: 15px;"
             )
             cells.addWidget(cell)
