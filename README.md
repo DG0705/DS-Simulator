@@ -7,7 +7,7 @@ A desktop application for visualizing data structures and algorithms, built as a
 The goal of this project is to create an interactive educational tool that helps students visually understand data structures and algorithms through animations and interactive operations. The application will eventually support:
 
 - **Data Structures**: Array, Stack, Queue, Linked List, Binary Search Tree, AVL Tree, Heap, Graph
-- **Algorithms**: Radix, Quick, Merge, Insertion, Selection, Bubble, and Heap Sort; BFS and DFS.
+- **Algorithms**: Sorting algorithms, Linear, Binary, Jump, Interpolation, and Exponential Search, plus graph BFS and DFS.
 
 ## Technology Stack
 
@@ -73,8 +73,10 @@ The goal of this project is to create an interactive educational tool that helps
 - [x] Horizontal scrolling for long lists
 - [x] Unit tests (`tests/test_linked_list.py`)
 
-**Upcoming Phases:**
-- [ ] Phase 11: Searching algorithms
+**Searching (COMPLETED):**
+- [x] Linear Search for unsorted or sorted integer input
+- [x] Binary, Jump, Interpolation, and Exponential Search for ascending sorted input
+- [x] Step-by-step array snapshots and active-code-line highlighting
 
 **Sorting (COMPLETED):**
 - [x] Radix Sort, Quick Sort, Merge Sort, Insertion Sort, Selection Sort, Bubble Sort, and Heap Sort
@@ -125,6 +127,11 @@ To sort numbers, open **Sorting** in the sidebar, choose an algorithm, enter
 comma-separated integers in the lower input field, and click **Execute**. The
 input row stays visible. Click **Step** to reveal the next iteration, or **Skip**
 to reveal every remaining step. The final sorted result appears at the bottom.
+
+To search numbers, open **Searching** in the sidebar, enter the target in the
+Target field, and provide comma-separated integers below. Linear Search accepts
+any order. Binary, Jump, Interpolation, and Exponential Search require ascending
+input. Click **Step** or **Skip** to follow comparisons and see the result.
 
 ## Running Tests
 

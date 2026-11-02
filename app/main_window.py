@@ -35,6 +35,7 @@ from app.core.constants import (
     GRAPH_OPERATION_NAMES,
     DATA_STRUCTURE_OPERATIONS,
     SEARCHING_ALGORITHMS,
+    SORTED_SEARCH_ALGORITHMS,
     ALGORITHM_VIEWS,
 )
 from app.ui.sidebar import Sidebar
@@ -284,12 +285,12 @@ class MainWindow(QMainWindow):
                 self._value_input.setEnabled(True)
                 self._bulk_input.setPlaceholderText(
                     "Sorted values, e.g. -3, 0, 5, 8"
-                    if name == "Binary Search" else "Values, e.g. 8, -3, 5, 8, 0"
+                    if name in SORTED_SEARCH_ALGORITHMS else "Values, e.g. 8, -3, 5, 8, 0"
                 )
                 self._bulk_button.hide()
                 self._bulk_button.setEnabled(False)
                 self._operation_description.setText(
-                    "Enter integer values and a target. Binary Search requires ascending order."
+                    "Enter integer values and a target. Sorted-search algorithms require ascending order."
                 )
 
     def _setup_sorting(self, name):
@@ -311,14 +312,14 @@ class MainWindow(QMainWindow):
         self._value_input.clear()
         self._value_input.setEnabled(searching)
         self._value_input.setPlaceholderText("Enter target value" if searching else "Use the comma-separated field below")
-        self._bulk_input.setPlaceholderText("Sorted values, e.g. -3, 0, 5, 8" if name == "Binary Search" else "e.g. 8, -3, 5, 8, 0")
+        self._bulk_input.setPlaceholderText("Sorted values, e.g. -3, 0, 5, 8" if name in SORTED_SEARCH_ALGORITHMS else "e.g. 8, -3, 5, 8, 0")
         self._bulk_input.setEnabled(True)
         self._bulk_button.hide()
         self._bulk_button.setEnabled(False)
         self._execute_button.setEnabled(True)
         self._reset_button.setEnabled(True)
         self._operation_description.setText(
-            "Enter integer values and a target, then click Execute to search. Binary Search requires ascending order."
+            "Enter integer values and a target, then click Execute to search. Sorted-search algorithms require ascending order."
             if searching else "Enter integers below, then click Execute to sort."
         )
 
@@ -833,6 +834,9 @@ class MainWindow(QMainWindow):
         complexity = {
             "Linear Search": ("O(n)", "O(1)"),
             "Binary Search": ("O(log n)", "O(1)"),
+            "Jump Search": ("O(√n)", "O(1)"),
+            "Interpolation Search": ("O(log log n) average, O(n) worst", "O(1)"),
+            "Exponential Search": ("O(log n)", "O(1)"),
         }
         self._update_status(name, *complexity[name])
 

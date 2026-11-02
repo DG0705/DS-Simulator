@@ -20,7 +20,13 @@ SORTING_ALGORITHMS = [
     "Bubble Sort", "Heap Sort", "Shell Sort", "Cocktail Sort",
 ]
 
-SEARCHING_ALGORITHMS = ["Linear Search", "Binary Search"]
+SEARCHING_ALGORITHMS = [
+    "Linear Search", "Binary Search", "Jump Search",
+    "Interpolation Search", "Exponential Search",
+]
+SORTED_SEARCH_ALGORITHMS = [
+    "Binary Search", "Jump Search", "Interpolation Search", "Exponential Search",
+]
 ALGORITHM_VIEWS = SORTING_ALGORITHMS + SEARCHING_ALGORITHMS
 
 # ============================================================
