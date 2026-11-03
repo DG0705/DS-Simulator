@@ -98,7 +98,7 @@ class HeapVisualizer(QWidget):
         n = len(self._heap_data)
         while (1 << depth) - 1 < n:
             depth += 1
-        width = max(1, 1 << (depth - 1)) * (self.NODE_RADIUS * 2 + self.MIN_SPACING)
+        width = self.PADDING * 2 + (1 << (depth - 1)) * (self.NODE_RADIUS * 2 + self.MIN_SPACING)
         height = self.PADDING * 2 + depth * self.LEVEL_HEIGHT + self.NODE_RADIUS
         self._canvas.setMinimumSize(int(width), int(height))
 
@@ -139,6 +139,18 @@ class _PaintArea(QWidget):
         self._edge_color = QColor(BORDER_LIGHT)
         self._bg_color = QColor(BG_SURFACE)
 
+    def _node_positions(self, count):
+        """Place each node in its complete binary-tree slot."""
+        positions = {}
+        available_width = self.width() - 2 * self.PADDING
+        for index in range(count):
+            level = (index + 1).bit_length() - 1
+            slot = index - ((1 << level) - 1)
+            x = self.PADDING + (slot + 0.5) * available_width / (1 << level)
+            y = self.PADDING + self.NODE_RADIUS + level * self.LEVEL_HEIGHT
+            positions[index] = (x, y)
+        return positions
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -155,28 +167,8 @@ class _PaintArea(QWidget):
             painter.end()
             return
 
-        center_x = self.width() / 2
-        positions = {}
+        positions = self._node_positions(len(heap_data))
         n = len(heap_data)
-        depth = 0
-        while (1 << depth) - 1 < n:
-            depth += 1
-
-        for i in range(n):
-            level = 0
-            temp = i + 1
-            while temp > 1:
-                temp = (temp + 1) // 2
-                level += 1
-
-            pos_in_level = i - ((1 << level) - 1)
-            nodes_in_level = min(1 << level, n - ((1 << level) - 1))
-            level_width = max(1, nodes_in_level) * (self.NODE_RADIUS * 2 + 20)
-            total_level_width = (1 << level) * (self.NODE_RADIUS * 2 + 20)
-            start_x = center_x - total_level_width / 2 + (self.NODE_RADIUS * 2 + 20) / 2
-            x = start_x + pos_in_level * (self.NODE_RADIUS * 2 + 20)
-            y = self.PADDING + level * self.LEVEL_HEIGHT
-            positions[i] = (x, y)
 
         for i in range(n):
             left = 2 * i + 1
